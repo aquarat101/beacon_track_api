@@ -1,0 +1,8 @@
+# ไม่ต้อง push dependencies
+node_modules/
+
+# ไม่ต้อง push config ที่อาจมี key ลับ
+.env
+
+# ไม่ต้อง push log ไฟล์ชั่วคราว
+*.log
