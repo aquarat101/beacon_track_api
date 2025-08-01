@@ -1,7 +1,7 @@
 {
-  "name": "backend_api",
+  "name": "backend_track_api",
   "version": "1.0.0",
-  "description": "",
+  "description": "��#\u0000 \u0000b\u0000e\u0000a\u0000c\u0000o\u0000n\u0000_\u0000t\u0000r\u0000a\u0000c\u0000k\u0000_\u0000a\u0000p\u0000i\u0000\r\u0000 \u0000",
   "main": "index.js",
   "scripts": {
     "start": "node api.js"
@@ -11,7 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^2.2.0",
-    "dotenv": "^17.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "firebase-admin": "^13.4.0"
   }
