@@ -28,5 +28,5 @@ app.get('/kids', kidController.getKids)
 app.post('/kids', kidController.addKid)
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`)
+    console.log(`Server running on port: ${PORT}`)
 })
