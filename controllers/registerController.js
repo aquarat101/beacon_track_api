@@ -2,7 +2,7 @@ const { db } = require('../firebase');
 
 const registerUser = async (req, res) => {
     const { firstName, lastName, email, phone } = req.body;
-    console.log("INTO BACKEND");
+    console.log("INTO REGISTERUSER");
 
     if (!firstName || !lastName || !email || !phone) {
         return res.status(400).json({ error: "Missing required fields" });

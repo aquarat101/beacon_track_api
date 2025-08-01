@@ -23,6 +23,7 @@ app.use('/api/beacon-hit', beaconRoutes);
 app.use('/places', placeRoutes)
 app.use('/register', registerRoutes)
 app.use('/users', usersRoutes)
+// app.use('/users/id', usersRoutes)
 
 app.get('/kids', kidController.getKids)
 app.post('/kids', kidController.addKid)
