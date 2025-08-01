@@ -1,28 +1,8 @@
-require('dotenv').config(); // ต้องเป็นบรรทัดแรกๆ
-const express = require('express');
-const admin = require('firebase-admin');
-const bodyParser = require('body-parser');
+const { db } = require('../firebase'); // สมมติว่าคุณแยก firebase init ไว้ไฟล์นี้
 
-// ตรวจสอบว่า Firebase Admin SDK ได้รับการเริ่มต้นแล้ว
-if (!admin.apps.length) {
-    const encodedKey = process.env.GOOGLE_APPLICATION_CREDENTIALS_ENCODED; // <--- ดึงค่าจาก .env
-    if (!encodedKey) {
-        throw new Error("GOOGLE_APPLICATION_CREDENTIALS_ENCODED environment variable is not set.");
-    }
-    const decodedKey = Buffer.from(encodedKey, 'base64').toString('utf8');
-    admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(decodedKey))
-    });
-}
-
-const db = admin.firestore();
-const app = express();
-
-app.use(bodyParser.json());
-
-app.get('/api/beacon-hit', async (req, res) => {
+const getBeaconHits = async (req, res) => {
     try {
-        const { beaconName, serial, zoneId, zoneName } = req.query;  
+        const { beaconName, serial, zoneId, zoneName } = req.query;
 
         const missingFields = [];
         if (!beaconName) missingFields.push('beaconName');
@@ -72,10 +52,6 @@ app.get('/api/beacon-hit', async (req, res) => {
             error: error.message
         });
     }
-});
+};
 
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`API server is running on port ${PORT}`);
-});
+module.exports = { getBeaconHits }

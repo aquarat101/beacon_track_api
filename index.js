@@ -7,6 +7,7 @@ const kidController = require('./controllers/kidController')
 const placeRoutes = require('./routes/placeRoutes')
 const registerRoutes = require('./routes/registerRoutes')
 const usersRoutes = require('./routes/userRoutes');
+const beaconRoutes = require('./routes/beaconRoutes');
 
 dotenv.config()
 
@@ -16,6 +17,8 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json())
 app.use(bodyParser.json())
+
+app.use('/api/beacon-hit', beaconRoutes);
 
 app.use('/places', placeRoutes)
 app.use('/register', registerRoutes)
