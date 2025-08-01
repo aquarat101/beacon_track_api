@@ -6,3 +6,5 @@ node_modules/
 
 # ไม่ต้อง push log ไฟล์ชั่วคราว
 *.log
+
+serviceAccountKey.json
