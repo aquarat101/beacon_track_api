@@ -1,9 +1,7 @@
 const express = require('express')
-const { getPlaces, addPlace } = require('../controllers/placeController')
-
 const router = express.Router()
+const { getPlacesByUserId } = require('../controllers/placeController')
 
-router.get('/', getPlaces)
-router.post('/', addPlace)
+router.get('/get/:id', getPlacesByUserId)
 
 module.exports = router

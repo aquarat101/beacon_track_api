@@ -46,13 +46,17 @@ const getKidsByUserId = async (req, res) => {
     console.log("INTO GET KIDS BY USER ID");
 
     try {
+        console.log(1)
         const userId = req.params.id;
+        console.log(2)
         const kidsSnapshot = await db.collection('kids').where('userId', '==', userId).get();
-
+        console.log(3)
+        console.log(kidsSnapshot)
         if (kidsSnapshot.empty) {
+            console.log(4)
             return res.status(404).json({ message: 'No kids found for this user' });
         }
-
+        console.log(5)
         const kids = [];
         kidsSnapshot.forEach(doc => {
             const data = doc.data();
@@ -185,11 +189,37 @@ const updateKid = async (req, res) => {
     }
 };
 
+const deleteKid = async (req, res) => {
+    console.log("INTO DELETE KID");
+
+    try {
+        const kidId = req.params.id;
+
+        if (!kidId) {
+            return res.status(400).json({ message: 'Kid ID is required' });
+        }
+
+        const kidRef = db.collection('kids').doc(kidId);
+        const doc = await kidRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ message: 'Kid not found' });
+        }
+
+        await kidRef.delete();
+        res.json({ message: 'Kid deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting kid:', error);
+        res.status(500).json({ message: 'Failed to delete kid', error: error.message });
+    }
+};
 
 module.exports = {
     getAllKids,
     getKidsByUserId,
     getKidByUserIdAndKidId,
     createKid,
-    updateKid
+    updateKid,
+    deleteKid,
 };

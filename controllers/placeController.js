@@ -1,14 +1,28 @@
-let places = []  // ใช้ array ชั่วคราวก่อนมี DB
+// controllers/placeController.js
+const db = require('../firebase')
 
-const getPlaces = (req, res) => {
-    res.json(places)
+const getPlacesByUserId = async (req, res) => {
+    const userId = req.params.userId
+
+    try {
+        const snapshot = await db.collection('places').where('userId', '==', userId).get()
+
+        if (snapshot.empty) {
+            return res.status(404).json({ message: 'ไม่พบสถานที่ของผู้ใช้คนนี้' })
+        }
+
+        const places = []
+        snapshot.forEach(doc => {
+            places.push({ id: doc.id, ...doc.data() })
+        })
+
+        res.json(places)
+    } catch (error) {
+        console.error('เกิดข้อผิดพลาด:', error)
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดขณะดึงข้อมูล', error: error.message })
+    }
 }
 
-const addPlace = (req, res) => {
-    const { name, lat, lng } = req.body
-    const newPlace = { id: Date.now(), name, lat, lng }
-    places.push(newPlace)
-    res.status(201).json(newPlace)
+module.exports = {
+    getPlacesByUserId
 }
-
-module.exports = { getPlaces, addPlace };
