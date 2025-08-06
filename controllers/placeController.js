@@ -29,7 +29,6 @@ const addPlace = async (req, res) => {
 
     try {
         const { userId, name, address, type, remark, lat, lng } = req.body;
-        console.log(req.body)
 
         const missingFields = []
 
@@ -73,7 +72,7 @@ const addPlace = async (req, res) => {
 
 const deletePlace = async (req, res) => {
     const placeId = req.params.placeId;
-    console.log(placeId)
+
     try {
         const docRef = db.collection('places').doc(placeId);
         const doc = await docRef.get();
