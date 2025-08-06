@@ -5,7 +5,7 @@ const { createKid, getKidsByUserId, getKidByUserIdAndKidId, getAllKids, updateKi
 
 const upload = multer({ storage: multer.memoryStorage() }); // เก็บไฟล์ไว้ใน memory buffer
 
-router.post('/create/:id', createKid)
+router.post('/create/:id', upload.single('avatar'), createKid)
 router.get('/getUserKids/:id', getKidsByUserId)
 router.get('/getKid/:userId/:kidId', getKidByUserIdAndKidId)
 router.get('/getAllKids/', getAllKids)

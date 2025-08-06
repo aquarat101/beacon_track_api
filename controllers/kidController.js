@@ -107,6 +107,9 @@ const createKid = async (req, res) => {
 
     try {
         const userId = req.params.id;
+
+        // กรณีส่งแบบ multipart/form-data ผ่าน multer:
+        // req.body จะมี fields แบบ string, req.file จะมีไฟล์ avatar
         const { profileName, beaconId, remark } = req.body;
 
         if (!profileName || !beaconId) {
@@ -115,30 +118,82 @@ const createKid = async (req, res) => {
 
         const now = new Date().toISOString();
 
+        // ข้อมูลพื้นฐานก่อนอัปโหลดไฟล์
         const kidData = {
             userId,
             name: profileName,
             status: 'offline',
             updated: now,
-            avatar: '/images/profile.png',
+            avatarUrl: '/images/profile.png', // ค่า default avatarUrl
             beaconId,
             remark: remark || '',
             createdAt: now,
         };
 
-        const kidRef = await db.collection('kids').add(kidData);
-        const createdKid = await kidRef.get();
-        const createdData = createdKid.data();
+        // ถ้าไม่มีไฟล์ avatar ให้บันทึกข้อมูลทันที
+        if (!req.file) {
+            const kidRef = await db.collection('kids').add(kidData);
+            const createdKid = await kidRef.get();
+            const createdData = createdKid.data();
 
-        res.status(201).json({
-            message: 'Kid profile created',
-            kid: {
-                id: createdKid.id,
-                ...createdData,
-                updated: formatDate(createdData.updated),
-                createdAt: formatDate(createdData.createdAt),
+            return res.status(201).json({
+                message: 'Kid profile created',
+                kid: {
+                    id: createdKid.id,
+                    ...createdData,
+                    updated: formatDate(createdData.updated),
+                    createdAt: formatDate(createdData.createdAt),
+                },
+            });
+        }
+
+        // ถ้ามีไฟล์ avatar ให้ upload ก่อน
+        const file = req.file;
+        const kidRef = db.collection('kids').doc(); // สร้าง doc id ก่อน
+        const kidId = kidRef.id;
+        const fileName = `avatars/kids/${kidId}_${Date.now()}_${file.originalname}`;
+        const fileUpload = bucket.file(fileName);
+
+        const stream = fileUpload.createWriteStream({
+            metadata: {
+                contentType: file.mimetype,
             },
         });
+
+        stream.on('error', (err) => {
+            console.error('Upload error:', err);
+            return res.status(500).json({ message: 'Upload failed', error: err.message });
+        });
+
+        stream.on('finish', async () => {
+            try {
+                await fileUpload.makePublic();
+                const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+                kidData.avatarUrl = publicUrl; // ใช้ URL รูปที่อัปโหลดแทน
+
+                await kidRef.set(kidData);
+
+                const createdKid = await kidRef.get();
+                const createdData = createdKid.data();
+
+                res.status(201).json({
+                    message: 'Kid profile created',
+                    kid: {
+                        id: kidId,
+                        ...createdData,
+                        updated: formatDate(createdData.updated),
+                        createdAt: formatDate(createdData.createdAt),
+                    },
+                });
+            } catch (e) {
+                console.error('Error saving kid after upload:', e);
+                res.status(500).json({ message: 'Failed to save kid after upload', error: e.message });
+            }
+        });
+
+        stream.end(file.buffer);
+
     } catch (error) {
         console.error('Error creating kid profile:', error);
         res.status(500).json({ message: 'Failed to create kid profile', error: error.message });
