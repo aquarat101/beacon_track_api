@@ -1,4 +1,4 @@
-const { db } = require('../firebase');
+const { db, bucket } = require('../firebase');
 
 // ✅ ฟังก์ชันแปลงวันที่โดยใช้ toLocaleString
 const formatDate = (isoString) => {
@@ -46,17 +46,13 @@ const getKidsByUserId = async (req, res) => {
     console.log("INTO GET KIDS BY USER ID");
 
     try {
-        console.log(1)
         const userId = req.params.id;
-        console.log(2)
         const kidsSnapshot = await db.collection('kids').where('userId', '==', userId).get();
-        console.log(3)
-        console.log(kidsSnapshot)
+
         if (kidsSnapshot.empty) {
-            console.log(4)
             return res.status(404).json({ message: 'No kids found for this user' });
         }
-        console.log(5)
+
         const kids = [];
         kidsSnapshot.forEach(doc => {
             const data = doc.data();
@@ -80,7 +76,6 @@ const getKidByUserIdAndKidId = async (req, res) => {
 
     try {
         const { userId, kidId } = req.params;
-        console.log('userId:', userId, 'kidId:', kidId);
 
         const kidRef = db.collection('kids').doc(kidId);
         const kidDoc = await kidRef.get();
@@ -155,7 +150,8 @@ const updateKid = async (req, res) => {
 
     try {
         const { userId, kidId } = req.params;
-        const { name, beaconId, remark } = req.body;
+        const updates = req.body;  // รับข้อมูลทั่วไปจาก body (name, beaconId, remark)
+        console.log('updates:', updates);
 
         const kidRef = db.collection('kids').doc(kidId);
         const kidDoc = await kidRef.get();
@@ -166,23 +162,54 @@ const updateKid = async (req, res) => {
 
         const kidData = kidDoc.data();
 
-        // ตรวจสอบสิทธิ์ว่า userId ตรงกับเจ้าของ
+        // ตรวจสอบสิทธิ์ userId
         if (kidData.userId !== userId) {
             return res.status(403).json({ message: 'Unauthorized to update this kid' });
         }
 
-        const now = new Date().toISOString();
+        // ถ้ามีไฟล์ avatar แนบมา (เช่น multer ตั้ง req.file)
+        if (req.file) {
+            const file = req.file;
+            const fileName = `avatars/kids/${kidId}_${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
 
-        const updatedData = {
-            ...(name !== undefined && { name }),
-            ...(beaconId !== undefined && { beaconId }),
-            ...(remark !== undefined && { remark }),
-            updated: now,
-        };
+            const stream = fileUpload.createWriteStream({
+                metadata: {
+                    contentType: file.mimetype,
+                },
+            });
 
-        await kidRef.update(updatedData);
+            stream.on('error', (err) => {
+                console.error('Upload error:', err);
+                return res.status(500).json({ message: 'Upload failed', error: err.message });
+            });
 
-        res.json({ message: 'Kid updated successfully' });
+            stream.on('finish', async () => {
+                try {
+                    await fileUpload.makePublic();
+                    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+                    updates.avatarUrl = publicUrl;
+                    updates.updated = new Date().toISOString();
+
+                    await kidRef.update(updates);
+
+                    const updatedDoc = await kidRef.get();
+                    res.json({ message: 'Kid updated successfully', kid: { id: kidId, ...updatedDoc.data() } });
+                } catch (e) {
+                    console.error('Error updating Firestore after upload:', e);
+                    res.status(500).json({ message: 'Failed to update kid after upload', error: e.message });
+                }
+            });
+
+            stream.end(file.buffer);
+        } else {
+            // ไม่มีไฟล์ avatar
+            updates.updated = new Date().toISOString();
+            await kidRef.update(updates);
+            const updatedDoc = await kidRef.get();
+            res.json({ message: 'Kid updated successfully', kid: { id: kidId, ...updatedDoc.data() } });
+        }
     } catch (error) {
         console.error('Error updating kid:', error);
         res.status(500).json({ message: 'Failed to update kid', error: error.message });

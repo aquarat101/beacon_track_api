@@ -1,7 +1,7 @@
 const { db } = require('../firebase');
 
 const registerUser = async (req, res) => {
-    const { firstName, lastName, email, phone } = req.body;
+    const { firstName, lastName, email, phone, avatar } = req.body;
     console.log("INTO REGISTER USER");
 
     if (!firstName || !lastName || !email || !phone) {
@@ -14,6 +14,7 @@ const registerUser = async (req, res) => {
             lastName,
             email,
             phone,
+            avatar,
             createdAt: new Date(),
         });
 

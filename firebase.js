@@ -5,6 +5,7 @@ const serviceAccount = require("./serviceAccountKey.json");
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://beacon-track-app.firebaseio.com", // ถ้าใช้ Realtime DB
+    storageBucket: 'gs://beacon-track-app.firebasestorage.app'
 });
 
 if (!admin.apps.length) {
@@ -19,5 +20,6 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const bucket = admin.storage().bucket();
 
-module.exports = { admin, db };
+module.exports = { admin, db, bucket };
