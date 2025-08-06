@@ -1,7 +1,9 @@
-const { db } = require('../firebase');
+const { db, bucket } = require('../firebase');
+
+const DEFAULT_AVATAR_URL = '/images/profile.png';
 
 const registerUser = async (req, res) => {
-    const { firstName, lastName, email, phone, avatar } = req.body;
+    const { firstName, lastName, email, phone } = req.body;  // avatar ไม่ต้องรับจาก client
     console.log("INTO REGISTER USER");
 
     if (!firstName || !lastName || !email || !phone) {
@@ -14,7 +16,7 @@ const registerUser = async (req, res) => {
             lastName,
             email,
             phone,
-            avatar,
+            avatarUrl: DEFAULT_AVATAR_URL,  // กำหนด default avatarUrl ที่นี่
             createdAt: new Date(),
         });
 
