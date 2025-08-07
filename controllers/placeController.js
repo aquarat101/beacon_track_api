@@ -51,7 +51,7 @@ const addPlace = async (req, res) => {
             name,
             address,
             type,
-            remark: remark || '',
+            remark: remark || '-',
             lat: lat,
             lng: lng,
             createdAt: new Date(),
@@ -70,7 +70,40 @@ const addPlace = async (req, res) => {
     }
 };
 
+const updatePlace = async (req, res) => {
+    console.log("INTO UPDATE PLACE");
+
+    const placeId = req.params.placeId;
+
+    try {
+        const updates = req.body;
+
+        if (!placeId) {
+            return res.status(400).json({ message: 'Place ID is required' });
+        }
+
+        const docRef = db.collection('places').doc(placeId);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ message: 'ไม่พบสถานที่ที่ต้องการอัปเดต' });
+        }
+
+        await docRef.update({
+            ...updates,
+            updatedAt: new Date()
+        });
+
+        res.json({ message: 'อัปเดตสถานที่เรียบร้อยแล้ว' });
+    } catch (error) {
+        console.error('เกิดข้อผิดพลาดในการอัปเดตสถานที่:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดขณะอัปเดตข้อมูล', error: error.message });
+    }
+};
+
 const deletePlace = async (req, res) => {
+    console.log("INTO DELETE PLACE")
+
     const placeId = req.params.placeId;
 
     try {
@@ -94,5 +127,6 @@ const deletePlace = async (req, res) => {
 module.exports = {
     getPlacesByUserId,
     addPlace,
+    updatePlace,
     deletePlace
 }

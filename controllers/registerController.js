@@ -3,8 +3,9 @@ const { db, bucket } = require('../firebase');
 const DEFAULT_AVATAR_URL = '/images/profile.png';
 
 const registerUser = async (req, res) => {
-    const { firstName, lastName, email, phone } = req.body;  // avatar ไม่ต้องรับจาก client
     console.log("INTO REGISTER USER");
+    // console.log(req.body)
+    const { userId, firstName, lastName, email, phone } = req.body;  // avatar ไม่ต้องรับจาก client
 
     if (!firstName || !lastName || !email || !phone) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -12,6 +13,7 @@ const registerUser = async (req, res) => {
 
     try {
         const docRef = await db.collection("users").add({
+            userId,
             firstName,
             lastName,
             email,

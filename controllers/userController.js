@@ -5,18 +5,27 @@ const getProfile = async (req, res) => {
     console.log("INTO GET PROFILE")
 
     try {
-        const userId = req.params.id;
-        const doc = await db.collection('users').doc(userId).get();
-        if (!doc.exists) {
+        const userId = req.params.userId;
+        console.log("Searching userId:", userId)
+
+        const snapshot = await db.collection('users')
+            .where('userId', '==', userId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        const doc = snapshot.docs[0];
         res.json({ id: doc.id, ...doc.data() });
+
     } catch (error) {
         console.error('Error fetching user:', error);
         res.status(500).json({ message: 'Failed to fetch user', error: error.message });
     }
 };
+
 
 // ✅ PUT: update user profile
 const updateProfile = async (req, res) => {
@@ -77,5 +86,25 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const findUserByUserId = async (userId) => {
+    console.log("INTO FIND USER BT USER ID")
 
-module.exports = { getProfile, updateProfile };
+    try {
+        const snapshot = await db.collection('users')
+            .where('userId', '==', userId)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return null; // ไม่พบผู้ใช้
+        }
+
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+    } catch (error) {
+        console.error('Error in findUserByUserId:', error);
+        throw error;
+    }
+};
+
+module.exports = { getProfile, updateProfile, findUserByUserId };
