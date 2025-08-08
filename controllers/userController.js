@@ -32,7 +32,7 @@ const updateProfile = async (req, res) => {
     console.log("INTO UPDATE PROFILE");
 
     try {
-        const userId = req.params.id; // ค่านี้จะเป็น userId field ใน Firestore
+        const userId = req.params.id;
         const updates = req.body;
 
         // 🔍 ค้นหา document ด้วย field userId
@@ -45,8 +45,7 @@ const updateProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const docRef = snapshot.docs[0].ref; // อ้างอิง doc เพื่อใช้ update
-        // const docData = snapshot.docs[0].data();
+        const docRef = snapshot.docs[0].ref;
 
         // ✅ ถ้ามี avatar file แนบมา
         if (req.file) {
@@ -55,9 +54,7 @@ const updateProfile = async (req, res) => {
             const fileUpload = bucket.file(fileName);
 
             const stream = fileUpload.createWriteStream({
-                metadata: {
-                    contentType: file.mimetype,
-                },
+                metadata: { contentType: file.mimetype },
             });
 
             stream.on('error', (err) => {
@@ -66,37 +63,36 @@ const updateProfile = async (req, res) => {
             });
 
             stream.on('finish', async () => {
-                // ✅ ตั้งค่าการเข้าถึงเป็น public
                 await fileUpload.makePublic();
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
                 updates.avatarUrl = publicUrl;
 
-                await docRef.update(updates);
+                if (Object.keys(updates).length === 0) {
+                    return res.status(400).json({ message: 'No data to update' });
+                }
 
+                await docRef.update(updates);
                 const updatedDoc = await docRef.get();
-                res.json({
-                    message: 'Profile updated',
-                    user: { id: docRef.id, ...updatedDoc.data() }
-                });
+                res.json({ message: 'Profile updated', user: { id: docRef.id, ...updatedDoc.data() } });
             });
 
             stream.end(file.buffer);
         } else {
+            // ถ้าไม่มีไฟล์และไม่มี fields ให้ update → ไม่ทำอะไร
+            if (!updates || Object.keys(updates).length === 0) {
+                return res.status(400).json({ message: 'No data to update' });
+            }
+
             await docRef.update(updates);
             const updatedDoc = await docRef.get();
-            res.json({
-                message: 'Profile updated',
-                user: { id: docRef.id, ...updatedDoc.data() }
-            });
+            res.json({ message: 'Profile updated', user: { id: docRef.id, ...updatedDoc.data() } });
         }
-
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
 };
-
 
 const findUserByUserId = async (userId) => {
     console.log("INTO FIND USER BT USER ID")
