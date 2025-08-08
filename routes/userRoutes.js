@@ -8,7 +8,7 @@ const upload = multer({ storage: multer.memoryStorage() }); // ใช้ memoryS
 
 router.get('/get/:userId', getProfile)
 router.put('/update/:id', upload.single('avatar'), updateProfile)
-router.get('./findUserByUserId/:userId', findUserByUserId)
+router.get('/findUserByUserId/:userId', findUserByUserId)
 
 
 module.exports = router;
