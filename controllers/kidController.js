@@ -206,7 +206,7 @@ const updateKid = async (req, res) => {
     try {
         const { userId, kidId } = req.params;
         const updates = req.body;  // รับข้อมูลทั่วไปจาก body (name, beaconId, remark)
-        console.log('updates:', updates);
+        // console.log('updates:', updates);
 
         const kidRef = db.collection('kids').doc(kidId);
         const kidDoc = await kidRef.get();
@@ -216,9 +216,10 @@ const updateKid = async (req, res) => {
         }
 
         const kidData = kidDoc.data();
-
         // ตรวจสอบสิทธิ์ userId
         if (kidData.userId !== userId) {
+            // console.log(kidData.userId)
+            // console.log(userId)
             return res.status(403).json({ message: 'Unauthorized to update this kid' });
         }
 

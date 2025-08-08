@@ -32,15 +32,21 @@ const updateProfile = async (req, res) => {
     console.log("INTO UPDATE PROFILE");
 
     try {
-        const userId = req.params.id;
+        const userId = req.params.id; // ค่านี้จะเป็น userId field ใน Firestore
         const updates = req.body;
 
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
+        // 🔍 ค้นหา document ด้วย field userId
+        const snapshot = await db.collection('users')
+            .where('userId', '==', userId)
+            .limit(1)
+            .get();
 
-        if (!userDoc.exists) {
+        if (snapshot.empty) {
             return res.status(404).json({ message: 'User not found' });
         }
+
+        const docRef = snapshot.docs[0].ref; // อ้างอิง doc เพื่อใช้ update
+        // const docData = snapshot.docs[0].data();
 
         // ✅ ถ้ามี avatar file แนบมา
         if (req.file) {
@@ -64,27 +70,33 @@ const updateProfile = async (req, res) => {
                 await fileUpload.makePublic();
                 const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-                // บันทึก URL รูปภาพใน Firestore
                 updates.avatarUrl = publicUrl;
 
-                await userRef.update(updates);
+                await docRef.update(updates);
 
-                const updatedDoc = await userRef.get();
-                res.json({ message: 'Profile updated', user: { id: userId, ...updatedDoc.data() } });
+                const updatedDoc = await docRef.get();
+                res.json({
+                    message: 'Profile updated',
+                    user: { id: docRef.id, ...updatedDoc.data() }
+                });
             });
 
             stream.end(file.buffer);
         } else {
-            // ไม่มีไฟล์ ก็แค่อัปเดตข้อมูลปกติ
-            await userRef.update(updates);
-            const updatedDoc = await userRef.get();
-            res.json({ message: 'Profile updated', user: { id: userId, ...updatedDoc.data() } });
+            await docRef.update(updates);
+            const updatedDoc = await docRef.get();
+            res.json({
+                message: 'Profile updated',
+                user: { id: docRef.id, ...updatedDoc.data() }
+            });
         }
+
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ message: 'Failed to update user', error: error.message });
     }
 };
+
 
 const findUserByUserId = async (userId) => {
     console.log("INTO FIND USER BT USER ID")
