@@ -94,10 +94,11 @@ const updateProfile = async (req, res) => {
     }
 };
 
-const findUserByUserId = async (userId) => {
+const findUserByUserId = async (req, res) => {
     console.log("INTO FIND USER BT USER ID")
 
     try {
+        const userId = req.params.userId;
         const snapshot = await db.collection('users')
             .where('userId', '==', userId)
             .limit(1)
@@ -108,7 +109,7 @@ const findUserByUserId = async (userId) => {
         }
 
         const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
+        res.json({ id: doc.id, ...doc.data() });
     } catch (error) {
         console.error('Error in findUserByUserId:', error);
         throw error;
