@@ -94,21 +94,24 @@ const updateProfile = async (req, res) => {
     }
 };
 
-const findUserByUserId = async (userId) => {
+const findUserByUserId = async (req, res) => {
     console.log("INTO FIND USER BT USER ID")
 
     try {
+        const userId = req.params.userId
         const snapshot = await db.collection('users')
             .where('userId', '==', userId)
             .limit(1)
             .get();
 
         if (snapshot.empty) {
-            return null; // ไม่พบผู้ใช้
+            console.log("empty")
+            return res.status(404).json({ message: "User not found" });
         }
 
+        console.log("not empty")
         const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() };
+        return res.status(200).json({ id: doc.id, ...doc.data() });
     } catch (error) {
         console.error('Error in findUserByUserId:', error);
         throw error;

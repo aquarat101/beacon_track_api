@@ -54,4 +54,57 @@ const getBeaconHits = async (req, res) => {
     }
 };
 
-module.exports = { getBeaconHits }
+const getZoneHitByBeaconIdAndUserId = async (req, res) => {
+    console.log("INTO GET ZONE HIT")
+
+    try {
+        const { beaconId, userId } = req.params;
+
+        const missingFields = [];
+        if (!beaconId) missingFields.push('beaconId');
+        if (!userId) missingFields.push('userId');
+
+        if (missingFields.length > 0) {w
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields.',
+                missingFields
+            });
+        }
+
+        // query หาใน Firestore
+        let query = db.collection('beacon_zone_hits')
+            .where('beaconId', '==', beaconId)
+            .where('userId', '==', userId);
+
+        const snapshot = await query.get();
+
+        if (snapshot.empty) {
+            return res.status(404).json({
+                success: false,
+                message: 'No matching documents found.'
+            });
+        }
+
+        const results = [];
+        snapshot.forEach(doc => {
+            results.push({ id: doc.id, ...doc.data() });
+        });
+
+        res.status(200).json({
+            success: true,
+            count: results.length,
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Error fetching beacon hits:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch beacon hits.',
+            error: error.message
+        });
+    }
+};
+
+module.exports = { getBeaconHits, getZoneHitByBeaconIdAndUserId }

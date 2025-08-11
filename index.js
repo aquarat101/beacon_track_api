@@ -18,7 +18,7 @@ app.use(cors())
 app.use(express.json())
 app.use(bodyParser.json())
 
-app.use('/api/beacon-hit', beaconRoutes);
+app.use('/beacons', beaconRoutes);
 app.use('/register', registerRoutes)
 app.use('/users', userRoutes)
 app.use('/kids', kidRoutes)

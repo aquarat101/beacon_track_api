@@ -4,8 +4,8 @@ const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.DATABASE_URL, // ถ้าใช้ Realtime DB
-    storageBucket: process.env.STORAGE_BUCKET
+    databaseURL: "https://beacon-track-app.firebaseio.com", // ถ้าใช้ Realtime DB
+    storageBucket: 'gs://beacon-track-app.firebasestorage.app'
 });
 
 if (!admin.apps.length) {
