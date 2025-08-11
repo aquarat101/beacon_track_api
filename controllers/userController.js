@@ -105,11 +105,11 @@ const findUserByUserId = async (req, res) => {
             .get();
 
         if (snapshot.empty) {
-            console.log("empty")
+            // console.log("empty")
             return res.status(404).json({ message: "User not found" });
         }
 
-        console.log("not empty")
+        // console.log("not empty")
         const doc = snapshot.docs[0];
         return res.status(200).json({ id: doc.id, ...doc.data() });
     } catch (error) {
