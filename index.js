@@ -66,7 +66,7 @@ app.post("/", async (req, res) => {
                         {
                           type: "text",
                           text: "Piyo Piyo are a dedicated service empowering parents with confidence in their child's safety, utilizing advanced, user-friendly, and reliable Beacon tracking technology.",
-                          color: "#aaaaaa",
+                          color: "#626262",
                           size: "sm",
                           flex: 1,
                           wrap: true,
@@ -104,7 +104,7 @@ app.post("/", async (req, res) => {
                         {
                           type: "text",
                           text: 'Start ensuring your child\'s peace of mind today! Please tap the "Register Now!" button below or click this link to create your member account and fully begin using our service.',
-                          color: "#aaaaaa",
+                          color: "#626262",
                           size: "sm",
                           flex: 1,
                           wrap: true,
