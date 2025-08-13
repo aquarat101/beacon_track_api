@@ -181,7 +181,7 @@ const createKid = async (req, res) => {
                         text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
                         wrap: true,
                         size: "sm",
-                        color: "#666666",
+                        color: "#626262",
                       },
                     ],
                   },
