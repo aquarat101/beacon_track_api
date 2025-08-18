@@ -1,22 +1,23 @@
 const { db } = require('../firebase')
+const fetch = require('node-fetch')
 
 const getPlacesByUserId = async (req, res) => {
     console.log("INTO GET PLACES BY USER ID")
-
+    
     const userId = req.params.userId
-
+    
     try {
         const snapshot = await db.collection('places').where('userId', '==', userId).get()
-
+        
         if (snapshot.empty) {
             return res.status(404).json({ message: 'ไม่พบสถานที่ของผู้ใช้คนนี้' })
         }
-
+        
         const places = []
         snapshot.forEach(doc => {
             places.push({ id: doc.id, ...doc.data() })
         })
-
+        
         res.json(places)
     } catch (error) {
         console.error('เกิดข้อผิดพลาด:', error)
@@ -24,27 +25,48 @@ const getPlacesByUserId = async (req, res) => {
     }
 }
 
-const addPlace = async (req, res) => {
-    console.log("INTO ADD PLACE")
+const searchPlaces = async (req, res) => {
+    console.log("INTO SEARCH PLACES")
+
+    const { query } = req.query
+    if (!query) return res.status(400).json({ error: 'Missing query' })
 
     try {
+        const apiKey = process.env.GOOGLE_MAP_API_KEY
+        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`
+
+        const response = await fetch(url)
+        const data = await response.json()
+
+        console.log(data)
+        res.json(data)
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ error: 'Failed to fetch places' })
+    }
+}
+
+const addPlace = async (req, res) => {
+    console.log("INTO ADD PLACE")
+    
+    try {
         const { userId, name, address, type, remark, lat, lng } = req.body;
-
+        
         const missingFields = []
-
+        
         if (!userId) missingFields.push('userId')
-        if (!name) missingFields.push('name')
-        if (!address) missingFields.push('address')
-        if (!type) missingFields.push('type')
-
-        if (missingFields.length > 0) {
-            console.log(missingFields)
-            return res.status(400).json({
-                message: 'Missing required fields',
-            })
-        } else {
-            console.log("All passed")
-        }
+            if (!name) missingFields.push('name')
+                if (!address) missingFields.push('address')
+                    if (!type) missingFields.push('type')
+                        
+                        if (missingFields.length > 0) {
+                            console.log(missingFields)
+                            return res.status(400).json({
+                                message: 'Missing required fields',
+                            })
+                        } else {
+                            console.log("All passed")
+                        }
 
         const newPlace = {
             userId,
@@ -123,10 +145,10 @@ const deletePlace = async (req, res) => {
     }
 };
 
-
 module.exports = {
     getPlacesByUserId,
+    searchPlaces,
     addPlace,
     updatePlace,
-    deletePlace
+    deletePlace,
 }

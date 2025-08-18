@@ -83,7 +83,6 @@ const updateProfile = async (req, res) => {
             if (!updates || Object.keys(updates).length === 0) {
                 return res.status(400).json({ message: 'No data to update' });
             }
-
             await docRef.update(updates);
             const updatedDoc = await docRef.get();
             res.json({ message: 'Profile updated', user: { id: docRef.id, ...updatedDoc.data() } });
