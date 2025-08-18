@@ -235,11 +235,6 @@ const createKid = async (req, res) => {
         const createdKid = await kidRef.get();
         const createdData = createdKid.data();
 
-        
-       
-
-        console.log("LINE push response:", data);
-
         res.status(201).json({
           message: "Kid profile created",
           kid: {
