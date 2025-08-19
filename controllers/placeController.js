@@ -38,7 +38,7 @@ const searchPlaces = async (req, res) => {
         const response = await fetch(url)
         const data = await response.json()
 
-        console.log(data)
+        // console.log(data)
         res.json(data)
     } catch (error) {
         console.error(error)
@@ -125,7 +125,7 @@ const updatePlace = async (req, res) => {
             message: 'อัปเดตสถานที่เรียบร้อยแล้ว',
             data: updatedData
         });
-        
+
     } catch (error) {
         console.error('เกิดข้อผิดพลาดในการอัปเดตสถานที่:', error);
         res.status(500).json({ message: 'เกิดข้อผิดพลาดขณะอัปเดตข้อมูล', error: error.message });
