@@ -151,46 +151,45 @@ const createKid = async (req, res) => {
       const createdKid = await kidRef.get();
       const createdData = createdKid.data();
 
-       const response  = await fetch("https://api.line.me/v2/bot/message/push", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
-          },
-          body: JSON.stringify({
-            to: userId,
-            messages: [
-              {
-                type: "flex",
-                altText: "Child's registration is complete!",
-                contents: {
-                  type: "bubble",
-                  size: "mega",
-                  body: {
-                    type: "box",
-                    layout: "vertical",
-                    contents: [
-                      {
-                        type: "text",
-                        text: "Piyo! Child's registration is complete! 🎉",
-                        weight: "bold",
-                        size: "sm",
-                      },
-                      {
-                        type: "text",
-                        text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
-                        wrap: true,
-                        size: "sm",
-                        color: "#626262",
-                      },
-                    ],
-                  },
+      const response = await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          to: userId,
+          messages: [
+            {
+              type: "flex",
+              altText: "Child's registration is complete!",
+              contents: {
+                type: "bubble",
+                size: "mega",
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  contents: [
+                    {
+                      type: "text",
+                      text: "Piyo! Child's registration is complete! 🎉",
+                      weight: "bold",
+                      size: "sm",
+                    },
+                    {
+                      type: "text",
+                      text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
+                      wrap: true,
+                      size: "sm",
+                      color: "#626262",
+                    },
+                  ],
                 },
               },
-            ],
-          }),
-        });
-
+            },
+          ],
+        }),
+      });
 
       return res.status(201).json({
         message: "Kid profile created",
@@ -234,6 +233,46 @@ const createKid = async (req, res) => {
 
         const createdKid = await kidRef.get();
         const createdData = createdKid.data();
+
+        const response = await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
+          },
+          body: JSON.stringify({
+            to: userId,
+            messages: [
+              {
+                type: "flex",
+                altText: "Child's registration is complete!",
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    contents: [
+                      {
+                        type: "text",
+                        text: "Piyo! Child's registration is complete! 🎉",
+                        weight: "bold",
+                        size: "sm",
+                      },
+                      {
+                        type: "text",
+                        text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
+                        wrap: true,
+                        size: "sm",
+                        color: "#626262",
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          }),
+        });
 
         res.status(201).json({
           message: "Kid profile created",
@@ -290,9 +329,8 @@ const updateKid = async (req, res) => {
     // ถ้ามีไฟล์ avatar แนบมา (เช่น multer ตั้ง req.file)
     if (req.file) {
       const file = req.file;
-      const fileName = `avatars/kids/${kidId}_${Date.now()}_${
-        file.originalname
-      }`;
+      const fileName = `avatars/kids/${kidId}_${Date.now()}_${file.originalname
+        }`;
       const fileUpload = bucket.file(fileName);
 
       const stream = fileUpload.createWriteStream({
