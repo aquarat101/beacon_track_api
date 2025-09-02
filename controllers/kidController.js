@@ -165,7 +165,7 @@ const createKid = async (req, res) => {
               altText: "Child's registration is complete!",
               contents: {
                 type: "bubble",
-                size: "mega",
+                size: "giga",
                 body: {
                   type: "box",
                   layout: "vertical",
@@ -178,7 +178,7 @@ const createKid = async (req, res) => {
                     },
                     {
                       type: "text",
-                      text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
+                      text: `${profileName} has been successfully registered in our system with ID: ${createdData.beaconId}`,
                       wrap: true,
                       size: "sm",
                       color: "#626262",
@@ -261,7 +261,7 @@ const createKid = async (req, res) => {
                       },
                       {
                         type: "text",
-                        text: `${profileName} has been successfully registered in our system with ID: ${createdKid.id}`,
+                        text: `${profileName} has been successfully registered in our system with ID: ${createdData.beaconId}`,
                         wrap: true,
                         size: "sm",
                         color: "#626262",
