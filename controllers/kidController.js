@@ -131,6 +131,18 @@ const createKid = async (req, res) => {
         .json({ message: "profileName and beaconId are required" });
     }
 
+    // ✅ ตรวจสอบว่า beaconId ซ้ำหรือไม่
+    const beaconQuery = await db
+      .collection("kids")
+      .where("beaconId", "==", beaconId)
+      .get();
+
+    if (!beaconQuery.empty) {
+      return res
+        .status(400)
+        .json({ message: "This beaconId is already in use" });
+    }
+
     const now = new Date().toISOString();
 
     // ข้อมูลพื้นฐานก่อนอัปโหลดไฟล์
@@ -324,6 +336,20 @@ const updateKid = async (req, res) => {
       return res
         .status(403)
         .json({ message: "Unauthorized to update this kid" });
+    }
+
+    // ✅ ถ้ามีการอัปเดต beaconId ต้องตรวจสอบว่าไม่ซ้ำ
+    if (updates.beaconId && updates.beaconId !== kidData.beaconId) {
+      const beaconQuery = await db
+        .collection("kids")
+        .where("beaconId", "==", updates.beaconId)
+        .get();
+
+      if (!beaconQuery.empty) {
+        return res
+          .status(400)
+          .json({ message: "This beaconId is already in use" });
+      }
     }
 
     // ถ้ามีไฟล์ avatar แนบมา (เช่น multer ตั้ง req.file)
