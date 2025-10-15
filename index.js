@@ -9,6 +9,9 @@ const userRoutes = require("./routes/userRoutes");
 const kidRoutes = require("./routes/kidRoutes");
 const placeRoutes = require("./routes/placeRoutes");
 
+const authRoute = require("./routes/routes_back_office/authRoutes");
+const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
+
 dotenv.config();
 
 const line = require("@line/bot-sdk");
@@ -29,6 +32,10 @@ app.use("/register", registerRoutes);
 app.use("/users", userRoutes);
 app.use("/kids", kidRoutes);
 app.use("/places", placeRoutes);
+
+app.use('/auth', authRoute);
+app.use('/schools', schoolRoute);
+
 app.post("/", async (req, res) => {
   const events = req.body.events;
 

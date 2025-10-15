@@ -64,7 +64,8 @@ const getZoneHitByBeaconIdAndUserId = async (req, res) => {
         if (!beaconId) missingFields.push('beaconId');
         if (!userId) missingFields.push('userId');
 
-        if (missingFields.length > 0) {w
+        if (missingFields.length > 0) {
+            w
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields.',
@@ -107,4 +108,82 @@ const getZoneHitByBeaconIdAndUserId = async (req, res) => {
     }
 };
 
-module.exports = { getBeaconHits, getZoneHitByBeaconIdAndUserId }
+const getZoneEventsByBeaconIdAndUserId = async (req, res) => {
+    console.log("INTO GET ZONE EVENTS (hits + exits)");
+
+    try {
+        const { beaconId, userId } = req.params;
+
+        const missingFields = [];
+        if (!beaconId) missingFields.push('beaconId');
+        if (!userId) missingFields.push('userId');
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields.',
+                missingFields
+            });
+        }
+
+        // 🔹 query ข้อมูลจาก 2 collections พร้อมกัน
+        const [hitsSnap, exitsSnap] = await Promise.all([
+            db.collection('beacon_zone_hits')
+                .where('beaconId', '==', beaconId)
+                .where('userId', '==', userId)
+                .get(),
+            db.collection('beacon_zone_exits')
+                .where('beaconId', '==', beaconId)
+                .where('userId', '==', userId)
+                .get()
+        ]);
+
+        const results = [];
+
+        hitsSnap.forEach(doc => {
+            results.push({
+                id: doc.id,
+                eventType: 'hit', // ✅ บอกว่าเข้า
+                ...doc.data()
+            });
+        });
+
+        exitsSnap.forEach(doc => {
+            results.push({
+                id: doc.id,
+                eventType: 'exit', // ✅ บอกว่าออก
+                ...doc.data()
+            });
+        });
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No matching documents found.'
+            });
+        }
+
+        // 🔹 เรียงตาม timestamp (ใหม่ก่อน)
+        results.sort((a, b) => {
+            const timeA = a.timestamp?._seconds || 0;
+            const timeB = b.timestamp?._seconds || 0;
+            return timeB - timeA;
+        });
+
+        res.status(200).json({
+            success: true,
+            count: results.length,
+            data: results
+        });
+
+    } catch (error) {
+        console.error('❌ Error fetching zone events:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch zone events.',
+            error: error.message
+        });
+    }
+};
+
+module.exports = { getBeaconHits, getZoneHitByBeaconIdAndUserId, getZoneEventsByBeaconIdAndUserId }

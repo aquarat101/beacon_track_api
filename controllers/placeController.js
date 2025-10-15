@@ -25,6 +25,37 @@ const getPlacesByUserId = async (req, res) => {
     }
 }
 
+const getPlaceByUserIdAndPlaceId = async (req, res) => {
+    console.log("INTO GET PLACE BY USERID & PLACEID")
+
+    const { userId, placeId } = req.params;
+
+    if (!userId || !placeId) {
+        return res.status(400).json({ message: 'userId และ placeId จำเป็นต้องระบุ' });
+    }
+
+    try {
+        const docRef = db.collection('places').doc(placeId);
+        const doc = await docRef.get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ message: 'ไม่พบสถานที่ที่ตรงกับ placeId นี้' });
+        }
+
+        const data = doc.data();
+
+        if (data.userId !== userId) {
+            return res.status(404).json({ message: 'สถานที่นี้ไม่ได้อยู่ในบัญชีผู้ใช้นี้' });
+        }
+
+        res.json({ id: doc.id, ...data });
+
+    } catch (error) {
+        console.error('Error fetching place by userId & placeId:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาดขณะดึงข้อมูล', error: error.message });
+    }
+};
+
 const searchPlaces = async (req, res) => {
     console.log("INTO SEARCH PLACES")
 
@@ -156,6 +187,7 @@ const deletePlace = async (req, res) => {
 
 module.exports = {
     getPlacesByUserId,
+    getPlaceByUserIdAndPlaceId,
     searchPlaces,
     addPlace,
     updatePlace,

@@ -1,8 +1,9 @@
 const express = require('express')
 const router = express.Router()
-const { getPlacesByUserId, searchPlaces, addPlace, updatePlace, deletePlace } = require('../controllers/placeController')
+const { getPlacesByUserId, getPlaceByUserIdAndPlaceId, searchPlaces, addPlace, updatePlace, deletePlace } = require('../controllers/placeController')
 
 router.get('/get/:userId', getPlacesByUserId)
+router.get('/getPlace/:userId/:placeId', getPlaceByUserIdAndPlaceId);
 router.get('/searchPlaces/:search', searchPlaces)
 router.post('/add/:userId', addPlace)
 router.put('/update/:placeId', updatePlace)
