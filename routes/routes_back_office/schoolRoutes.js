@@ -13,6 +13,7 @@ router.delete('/delete/:id', schoolController.deleteSchool); // <-- delete schoo
 router.get('/getUser/:id', schoolController.getSchoolUser);
 router.get('/getAllUser', schoolController.getSchoolUsers);
 router.post('/createSchool', schoolController.createSchoolUser);
+router.put('/updateSchoolUser/:id', schoolController.updateSchoolUser);
 router.delete('/deleteUser/:id', schoolController.deleteSchoolUser); // <-- delete user
 
 module.exports = router;

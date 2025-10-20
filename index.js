@@ -11,8 +11,7 @@ const placeRoutes = require("./routes/placeRoutes");
 
 const authRoute = require("./routes/routes_back_office/authRoutes");
 const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
-
-dotenv.config();
+const schoolUserRoute = require("./routes/routes_back_office/usersRoutes");
 
 const line = require("@line/bot-sdk");
 const client = new line.Client({
@@ -20,9 +19,8 @@ const client = new line.Client({
   channelSecret: process.env.CHANNEL_SECRET,
 });
 
+dotenv.config();
 const app = express();
-const PORT = process.env.API_DOMAIN || 3001;
-
 app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
@@ -38,7 +36,7 @@ app.use('/schools', schoolRoute);
 
 app.post("/", async (req, res) => {
   const events = req.body.events;
-
+  
   for (const event of events) {
     if (event.type === "follow") {
       await client.replyMessage(event.replyToken, [
@@ -149,6 +147,7 @@ app.post("/", async (req, res) => {
   }
 });
 
+const PORT = process.env.API_DOMAIN || 3001;
 
 app.listen(PORT, () => {
   console.log(`Server running on port: ${PORT}`);

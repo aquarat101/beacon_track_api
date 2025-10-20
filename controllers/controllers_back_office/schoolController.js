@@ -120,6 +120,7 @@ const getSchoolUser = async (req, res) => {
 }
 
 const getSchoolUsers = async (req, res) => {
+    console.log("GET SCHOOL USERS")
     try {
         const snapshot = await db.collection("school_users").orderBy("createdAt", "desc").get()
         const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
@@ -159,6 +160,35 @@ const updateSchool = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+// UPDATE school user by id
+const updateSchoolUser = async (req, res) => {
+    try {
+        const { id } = req.params
+        const updateData = req.body
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Missing user id" })
+        }
+
+        const docRef = db.collection("school_users").doc(id)
+        const docSnap = await docRef.get()
+
+        if (!docSnap.exists) {
+            return res.status(404).json({ success: false, message: "School user not found" })
+        }
+
+        updateData.updatedAt = new Date()
+
+        await docRef.update(updateData)
+
+        const updatedDoc = await docRef.get()
+        res.status(200).json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } })
+    } catch (error) {
+        console.error("🔥 Error updating school user:", error)
+        res.status(500).json({ success: false, message: "Internal server error" })
+    }
+}
 
 
 // DELETE school by id
@@ -201,15 +231,14 @@ const deleteSchoolUser = async (req, res) => {
 
 module.exports = {
     createSchool,
-    createSchoolUser,
-
     getSchool,
     getSchools,
+    updateSchool,
+    deleteSchool,
+
+    createSchoolUser,
     getSchoolUser,
     getSchoolUsers,
-
-    updateSchool,
-    
-    deleteSchool,
+    updateSchoolUser,
     deleteSchoolUser
 };
