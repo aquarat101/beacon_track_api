@@ -1,18 +1,19 @@
 // controllers/schoolController.js
 const { db } = require("../../firebase");
 
+// controllers/schoolController.js
 const createSchool = async (req, res) => {
     try {
-        const { schoolName, schoolType, educationLevel } = req.body;
+        const { schoolName, schoolType, educationLevel, initialStudents } = req.body;
         if (!schoolName || !schoolType || !educationLevel) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
-        // เตรียมข้อมูล
+        // เตรียมข้อมูล school
         const newSchool = {
-            schoolName: schoolName,
-            schoolType: schoolType,
-            educationLevel: educationLevel,
+            schoolName,
+            schoolType,
+            educationLevel,
             devices: 0,
             status: "Active",
             address: "100/1 Piyo Piyo School",
@@ -30,9 +31,18 @@ const createSchool = async (req, res) => {
         // เพิ่มเข้า Firestore
         const docRef = await db.collection("schools").add(newSchool);
 
+        // ถ้ามี initialStudents (array) ให้เพิ่มเข้า subcollection students
+        if (Array.isArray(initialStudents) && initialStudents.length > 0) {
+            const batch = db.batch();
+            initialStudents.forEach(student => {
+                const studentRef = docRef.collection('students').doc(); // auto id
+                batch.set(studentRef, { ...student, createdAt: new Date() });
+            });
+            await batch.commit();
+        }
+
         // ดึงข้อมูลกลับมาพร้อม id
         const savedData = { id: docRef.id, ...newSchool };
-
         res.status(201).json({ success: true, data: savedData });
     } catch (error) {
         console.error("🔥 Error creating school:", error);
@@ -40,19 +50,64 @@ const createSchool = async (req, res) => {
     }
 };
 
+const createStudent = async (req, res) => {
+    try {
+        const { schoolId, userId } = req.params; // ดึง schoolId จาก route
+        const { beaconId, profileName, status } = req.body;
+        const deviceName = profileName;
+
+        if (!schoolId || !beaconId || !deviceName) {
+            return res.status(400).json({ success: false, message: "Missing required fields" });
+        }
+
+        // ตรวจสอบว่า school มีอยู่จริง
+        const schoolDoc = await db.collection("schools").doc(schoolId).get();
+        if (!schoolDoc.exists) {
+            return res.status(404).json({ success: false, message: "School not found" });
+        }
+
+        // เพิ่ม student ใน subcollection students
+        const studentData = {
+            beaconId,
+            deviceName,
+            userId,
+            status: status || "offline",
+            createdAt: new Date()
+        };
+
+        const studentRef = await db
+            .collection("schools")
+            .doc(schoolId)
+            .collection("students")
+            .add(studentData);
+
+        res.status(201).json({
+            success: true,
+            data: { id: studentRef.id, ...studentData }
+        });
+
+    } catch (error) {
+        console.error("🔥 Error creating student:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+
 const createSchoolUser = async (req, res) => {
     try {
-        const { name, email, phone_number, role, school } = req.body
-        if (!name || !email || !phone_number || !role || !school) {
+        const { name, email, phone_number, role, school, status } = req.body
+        if (!name || !email || !phone_number || !role || !school || !status) {
             return res.status(400).json({ message: "Missing required fields" })
         }
 
         const newUser = {
             name,
             email,
+            password: "123",
             phone_number,
             role,
             school,
+            status,
             createdAt: new Date(),
         }
 
@@ -127,6 +182,26 @@ const getSchoolUsers = async (req, res) => {
         res.status(200).json({ success: true, data: users })
     } catch (error) {
         console.error("🔥 Error fetching users:", error)
+        res.status(500).json({ success: false, message: "Internal server error" })
+    }
+}
+
+
+// ดึง students ของโรงเรียนตาม schoolId
+const getSchoolStudents = async (req, res) => {
+    try {
+        const { schoolId } = req.params
+        if (!schoolId) return res.status(400).json({ success: false, message: "Missing schoolId" })
+
+        const schoolDoc = await db.collection("schools").doc(schoolId).get()
+        if (!schoolDoc.exists) return res.status(404).json({ success: false, message: "School not found" })
+
+        const snapshot = await db.collection("schools").doc(schoolId).collection("students").get()
+        const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+        res.status(200).json({ success: true, data: students })
+    } catch (error) {
+        console.error("🔥 Error fetching students:", error)
         res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
@@ -231,8 +306,10 @@ const deleteSchoolUser = async (req, res) => {
 
 module.exports = {
     createSchool,
+    createStudent,
     getSchool,
     getSchools,
+    getSchoolStudents,
     updateSchool,
     deleteSchool,
 

@@ -3,7 +3,7 @@ const { db } = require('../../firebase');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const usersCollection = db.collection('back_office_users');
+const usersCollection = db.collection('school_users');
 
 const findUserByEmail = async (email) => {
     const q = await usersCollection.where('email', '==', email).limit(1).get();
@@ -15,10 +15,12 @@ const findUserByEmail = async (email) => {
 const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
-        if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+        if (!email || !password)
+            return res.status(400).json({ message: 'Email and password required' });
 
         const existing = await findUserByEmail(email.toLowerCase());
-        if (existing) return res.status(400).json({ message: 'Email already in use' });
+        if (existing)
+            return res.status(400).json({ message: 'Email already in use' });
 
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -26,6 +28,10 @@ const register = async (req, res) => {
             name: name || '',
             email: email.toLowerCase(),
             passwordHash,
+            phone_number: '-',
+            role: 'user',
+            school: 'school',
+            status: 'Inactive',
             createdAt: new Date().toISOString(),
         });
 
@@ -41,26 +47,69 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
+    console.log('INTO LOGIN');
     try {
         const { email, password } = req.body;
-        if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
+        if (!email || !password)
+            return res.status(400).json({ message: 'Email and password required' });
 
         const user = await findUserByEmail(email.toLowerCase());
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!user)
+            return res.status(400).json({ message: 'Invalid credentials' });
 
         const ok = await bcrypt.compare(password, user.passwordHash || '');
-        if (!ok) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!ok)
+            return res.status(400).json({ message: 'Invalid credentials' });
 
         const payload = { uid: user.id, email: user.email };
-        const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
+            expiresIn: '7d',
+        });
 
-        delete user.passwordHash;
+        // 🔹 อัปเดต status -> Active
+        await usersCollection.doc(user.id).update({
+            status: 'Active',
+            lastLogin: new Date().toISOString(),
+        });
 
-        res.json({ message: 'Logged in', token, user: { id: user.id, ...user } });
+        const { passwordHash, ...userWithoutPassword } = user;
+        userWithoutPassword.status = 'Active'; // คืนค่ากลับให้ front เห็นเลย
+
+        res.json({
+            message: 'Logged in',
+            token,
+            user: userWithoutPassword,
+        });
     } catch (err) {
-        console.error(err);
+        console.error('🔥 Login error:', err);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-module.exports = { register, login };
+const logout = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+
+        // ค้นหาผู้ใช้ใน Firestore
+        const q = await usersCollection.where('email', '==', email.toLowerCase()).limit(1).get();
+        if (q.empty) return res.status(404).json({ message: 'User not found' });
+
+        const doc = q.docs[0];
+        const userRef = usersCollection.doc(doc.id);
+
+        // ✅ อัปเดตสถานะเป็น Inactive
+        await userRef.update({ status: 'Inactive', updatedAt: new Date().toISOString() });
+
+        // ✅ เคลียร์ cookie (optional)
+        res.clearCookie('token');
+        res.clearCookie('schoolName');
+
+        res.json({ message: 'Logged out successfully' });
+    } catch (err) {
+        console.error('Logout error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { register, login, logout };

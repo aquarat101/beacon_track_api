@@ -18,14 +18,14 @@ const formatDate = (isoString) => {
 
 const getAllKids = async (req, res) => {
   console.log("INTO GET ALL KIDS");
-
+  
   try {
     const kidsSnapshot = await db.collection("kids").get();
-
+    
     if (kidsSnapshot.empty) {
       return res.status(404).json({ message: "No kids found" });
     }
-
+    
     const kids = [];
     kidsSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -36,36 +36,70 @@ const getAllKids = async (req, res) => {
         createdAt: formatDate(data.createdAt),
       });
     });
-
+    
     res.json({ kids });
   } catch (error) {
     console.error("Error fetching all kids:", error);
     res
+    .status(500)
+    .json({ message: "Failed to fetch kids", error: error.message });
+  }
+};
+
+const getKidByKidId = async (req, res) => {
+  console.log("INTO GET KID BY KID ID");
+
+  try {
+    const { kidId } = req.params;
+
+    if (!kidId) {
+      return res.status(400).json({ message: "Kid ID is required" });
+    }
+
+    const kidRef = db.collection("kids").doc(kidId);
+    const kidDoc = await kidRef.get();
+
+    if (!kidDoc.exists) {
+      return res.status(404).json({ message: "Kid not found" });
+    }
+
+    const kidData = kidDoc.data();
+
+    res.json({
+      id: kidDoc.id,
+      ...kidData,
+      updated: formatDate(kidData.updated),
+      createdAt: formatDate(kidData.createdAt),
+    });
+    
+  } catch (error) {
+    console.error("Error fetching kid by kidId:", error);
+    res
       .status(500)
-      .json({ message: "Failed to fetch kids", error: error.message });
+      .json({ message: "Failed to fetch kid", error: error.message });
   }
 };
 
 const getKidsByUserId = async (req, res) => {
   console.log("INTO GET KIDS BY USER ID");
-
+  
   try {
     const userId = req.params.id;
     const kidsSnapshot = await db
       .collection("kids")
       .where("userId", "==", userId)
       .get();
-
-    if (kidsSnapshot.empty) {
-      return res.status(404).json({ message: "No kids found for this user" });
-    }
-
-    const kids = [];
-    kidsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      kids.push({
-        id: doc.id,
-        ...data,
+      
+      if (kidsSnapshot.empty) {
+        return res.status(404).json({ message: "No kids found for this user" });
+      }
+      
+      const kids = [];
+      kidsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        kids.push({
+          id: doc.id,
+          ...data,
         updated: formatDate(data.updated),
         createdAt: formatDate(data.createdAt),
       });
@@ -115,6 +149,26 @@ const getKidByUserIdAndKidId = async (req, res) => {
   }
 };
 
+const getMultipleKids = async (req, res) => {
+  try {
+    const { ids } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, message: "No ids provided" })
+
+    const promises = ids.map(id => db.collection("kids").doc(id).get())
+    const snapshots = await Promise.all(promises)
+
+    const kids = snapshots
+      .filter(doc => doc.exists)
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+
+    res.status(200).json({ success: true, data: kids })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, message: "Internal server error" })
+  }
+}
+
+
 const createKid = async (req, res) => {
   console.log("INTO CREATE KID");
 
@@ -155,7 +209,7 @@ const createKid = async (req, res) => {
       updated: now,
       avatarUrl: avatarUrl || "/image-avatars/1.png", // default ถ้าไม่ส่งมา
       beaconId,
-      remark: remark || "-" ,
+      remark: remark || "-",
       createdAt: now,
 
       lastLat: null,
@@ -164,7 +218,7 @@ const createKid = async (req, res) => {
       lastOfflineAt: null,
       lastZoneId: "",
 
-      alertCounter: 0,
+      alertCounter: 3,
     };
 
     // ✅ เพิ่มข้อมูลเข้า Firestore
@@ -443,6 +497,46 @@ const createKid = async (req, res) => {
 //   }
 // };
 
+
+
+// async function addDeviceForStudent() {
+//   if (!form.value.beaconId || !form.value.deviceName || !form.value.userId || !form.value.school) {
+//     alert("Please fill all required fields")
+//     return
+//   }
+
+//   try {
+//     isLoading.value = true
+
+//     // POST ไปยัง endpoint student/device
+//     const res = await fetch(`${config.apiDomain}/schools/${form.value.school}/students`, {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify({
+//         beaconId: form.value.beaconId,
+//         deviceName: form.value.deviceName,
+//         studentId: form.value.userId,
+//         status: form.value.status
+//       })
+//     })
+
+//     const data = await res.json()
+
+//     if (res.ok && data.success) {
+//       emit("created", data.data)
+//       closeModal()
+//     } else {
+//       alert(data.message || "Failed to create device")
+//     }
+//   } catch (err) {
+//     console.error("❌ Error creating device:", err)
+//     alert("Error creating device")
+//   } finally {
+//     isLoading.value = false
+//   }
+// }
+
+
 const updateKid = async (req, res) => {
   console.log("INTO UPDATE KID");
 
@@ -630,9 +724,14 @@ const deleteKid = async (req, res) => {
 
 module.exports = {
   getAllKids,
+  getKidByKidId,
   getKidsByUserId,
   getKidByUserIdAndKidId,
+  getMultipleKids,
   createKid,
+
+  // addDeviceForStudent,
+
   updateKid,
   deleteKid,
 };

@@ -5,7 +5,9 @@ const schoolController = require('../../controllers/controllers_back_office/scho
 // Schools
 router.get('/get/:id', schoolController.getSchool);
 router.get('/getAll', schoolController.getSchools);
+router.get("/:schoolId/getAllStudent", schoolController.getSchoolStudents)
 router.post('/create', schoolController.createSchool);
+router.post('/createStudent/:schoolId/:userId', schoolController.createStudent)
 router.put("/update/:id", schoolController.updateSchool);
 router.delete('/delete/:id', schoolController.deleteSchool); // <-- delete school
 

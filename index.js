@@ -11,7 +11,6 @@ const placeRoutes = require("./routes/placeRoutes");
 
 const authRoute = require("./routes/routes_back_office/authRoutes");
 const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
-const schoolUserRoute = require("./routes/routes_back_office/usersRoutes");
 
 const line = require("@line/bot-sdk");
 const client = new line.Client({
