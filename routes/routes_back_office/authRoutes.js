@@ -3,12 +3,13 @@ const express = require('express');
 const router = express.Router();
 
 // destructuring controller functions
-const { register, login } = require('../../controllers/controllers_back_office/authController');
+const { register, login, logout } = require('../../controllers/controllers_back_office/authController');
 const { verifyToken } = require('../../middleware/authMiddleware');
 
 // Routes
 router.post('/register', register);
 router.post('/login', login);
+router.post('/logout', logout)
 
 // Protected route
 router.get('/me', verifyToken, async (req, res) => {
