@@ -19,14 +19,14 @@ const formatDate = (isoString) => {
 
 const getAllKids = async (req, res) => {
   console.log("INTO GET ALL KIDS");
-  
+
   try {
     const kidsSnapshot = await db.collection("kids").get();
-    
+
     if (kidsSnapshot.empty) {
       return res.status(404).json({ message: "No kids found" });
     }
-    
+
     const kids = [];
     kidsSnapshot.forEach((doc) => {
       const data = doc.data();
@@ -37,13 +37,13 @@ const getAllKids = async (req, res) => {
         createdAt: formatDate(data.createdAt),
       });
     });
-    
+
     res.json({ kids });
   } catch (error) {
     console.error("Error fetching all kids:", error);
     res
-    .status(500)
-    .json({ message: "Failed to fetch kids", error: error.message });
+      .status(500)
+      .json({ message: "Failed to fetch kids", error: error.message });
   }
 };
 
@@ -72,7 +72,6 @@ const getKidByKidId = async (req, res) => {
       updated: formatDate(kidData.updated),
       createdAt: formatDate(kidData.createdAt),
     });
-    
   } catch (error) {
     console.error("Error fetching kid by kidId:", error);
     res
@@ -83,24 +82,24 @@ const getKidByKidId = async (req, res) => {
 
 const getKidsByUserId = async (req, res) => {
   console.log("INTO GET KIDS BY USER ID");
-  
+
   try {
     const userId = req.params.id;
     const kidsSnapshot = await db
       .collection("kids")
       .where("userId", "==", userId)
       .get();
-      
-      if (kidsSnapshot.empty) {
-        return res.status(404).json({ message: "No kids found for this user" });
-      }
-      
-      const kids = [];
-      kidsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        kids.push({
-          id: doc.id,
-          ...data,
+
+    if (kidsSnapshot.empty) {
+      return res.status(404).json({ message: "No kids found for this user" });
+    }
+
+    const kids = [];
+    kidsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      kids.push({
+        id: doc.id,
+        ...data,
         updated: formatDate(data.updated),
         createdAt: formatDate(data.createdAt),
       });
@@ -152,23 +151,25 @@ const getKidByUserIdAndKidId = async (req, res) => {
 
 const getMultipleKids = async (req, res) => {
   try {
-    const { ids } = req.body
-    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, message: "No ids provided" })
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res
+        .status(400)
+        .json({ success: false, message: "No ids provided" });
 
-    const promises = ids.map(id => db.collection("kids").doc(id).get())
-    const snapshots = await Promise.all(promises)
+    const promises = ids.map((id) => db.collection("kids").doc(id).get());
+    const snapshots = await Promise.all(promises);
 
     const kids = snapshots
-      .filter(doc => doc.exists)
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((doc) => doc.exists)
+      .map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    res.status(200).json({ success: true, data: kids })
+    res.status(200).json({ success: true, data: kids });
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ success: false, message: "Internal server error" })
+    console.error(err);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
-}
-
+};
 
 const createKid = async (req, res) => {
   console.log("INTO CREATE KID");
@@ -193,7 +194,8 @@ const createKid = async (req, res) => {
       .get();
 
     if (!beaconQuery.empty) {
-      return res.status(409).json({ // ใช้ 409 Conflict จะสื่อว่าข้อมูลซ้ำ
+      return res.status(409).json({
+        // ใช้ 409 Conflict จะสื่อว่าข้อมูลซ้ำ
         success: false,
         errorCode: "BEACON_ID_DUPLICATE",
         message: "This beaconId is already in use. Please choose another one.",
@@ -288,8 +290,6 @@ const createKid = async (req, res) => {
     });
   }
 };
-
-
 
 // const createKid = async (req, res) => {
 //   console.log("INTO CREATE KID");
@@ -498,8 +498,6 @@ const createKid = async (req, res) => {
 //   }
 // };
 
-
-
 // async function addDeviceForStudent() {
 //   if (!form.value.beaconId || !form.value.deviceName || !form.value.userId || !form.value.school) {
 //     alert("Please fill all required fields")
@@ -537,7 +535,6 @@ const createKid = async (req, res) => {
 //   }
 // }
 
-
 const updateKid = async (req, res) => {
   console.log("INTO UPDATE KID");
 
@@ -555,17 +552,22 @@ const updateKid = async (req, res) => {
 
     // ตรวจสอบสิทธิ์ userId
     if (kidData.userId !== userId) {
-      return res.status(403).json({ message: "Unauthorized to update this kid" });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to update this kid" });
     }
 
     // ตรวจสอบ beaconId ซ้ำ
     if (updates.beaconId && updates.beaconId !== kidData.beaconId) {
-      const beaconQuery = await db.collection("kids")
+      const beaconQuery = await db
+        .collection("kids")
         .where("beaconId", "==", updates.beaconId)
         .get();
 
       if (!beaconQuery.empty) {
-        return res.status(400).json({ message: "This beaconId is already in use" });
+        return res
+          .status(400)
+          .json({ message: "This beaconId is already in use" });
       }
     }
 
@@ -586,13 +588,13 @@ const updateKid = async (req, res) => {
       message: "Kid updated successfully",
       kid: { id: kidId, ...updatedDoc.data() },
     });
-
   } catch (error) {
     console.error("Error updating kid:", error);
-    res.status(500).json({ message: "Failed to update kid", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to update kid", error: error.message });
   }
 };
-
 
 // const updateKid = async (req, res) => {
 //   console.log("INTO UPDATE KID");

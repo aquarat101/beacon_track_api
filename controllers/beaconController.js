@@ -1,189 +1,194 @@
-const { db } = require('../firebase'); // สมมติว่าคุณแยก firebase init ไว้ไฟล์นี้
+const { db } = require("../firebase"); // สมมติว่าคุณแยก firebase init ไว้ไฟล์นี้
 
 const getBeaconHits = async (req, res) => {
-    try {
-        const { beaconName, serial, zoneId, zoneName } = req.query;
+  try {
+    const { beaconName, serial, zoneId, zoneName } = req.query;
 
-        const missingFields = [];
-        if (!beaconName) missingFields.push('beaconName');
-        if (!serial) missingFields.push('serial');
-        if (!zoneId) missingFields.push('zoneId');
-        if (!zoneName) missingFields.push('zoneName');
+    const missingFields = [];
+    if (!beaconName) missingFields.push("beaconName");
+    if (!serial) missingFields.push("serial");
+    if (!zoneId) missingFields.push("zoneId");
+    if (!zoneName) missingFields.push("zoneName");
 
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields.',
-                missingFields
-            });
-        }
-
-        let query = db.collection('beacon_zone_hits')
-            .where('beaconName', '==', beaconName)
-            .where('serial', '==', serial)
-            .where('zoneId', '==', zoneId)
-            .where('zoneName', '==', zoneName);
-
-        const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            return res.status(404).json({
-                success: false,
-                message: 'No matching documents found.'
-            });
-        }
-
-        const results = [];
-        snapshot.forEach(doc => {
-            results.push({ id: doc.id, ...doc.data() });
-        });
-
-        res.status(200).json({
-            success: true,
-            count: results.length,
-            data: results
-        });
-
-    } catch (error) {
-        console.error('Error fetching beacon hits:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch beacon hits.',
-            error: error.message
-        });
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields.",
+        missingFields,
+      });
     }
+
+    let query = db
+      .collection("beacon_zone_hits")
+      .where("beaconName", "==", beaconName)
+      .where("serial", "==", serial)
+      .where("zoneId", "==", zoneId)
+      .where("zoneName", "==", zoneName);
+
+    const snapshot = await query.get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: "No matching documents found.",
+      });
+    }
+
+    const results = [];
+    snapshot.forEach((doc) => {
+      results.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    console.error("Error fetching beacon hits:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch beacon hits.",
+      error: error.message,
+    });
+  }
 };
 
 const getZoneHitByBeaconIdAndUserId = async (req, res) => {
-    console.log("INTO GET ZONE HIT")
+  console.log("INTO GET ZONE HIT");
 
-    try {
-        const { beaconId, userId } = req.params;
+  try {
+    const { beaconId, userId } = req.params;
 
-        const missingFields = [];
-        if (!beaconId) missingFields.push('beaconId');
-        if (!userId) missingFields.push('userId');
+    const missingFields = [];
+    if (!beaconId) missingFields.push("beaconId");
+    if (!userId) missingFields.push("userId");
 
-        if (missingFields.length > 0) {
-            w
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields.',
-                missingFields
-            });
-        }
-
-        // query หาใน Firestore
-        let query = db.collection('beacon_zone_hits')
-            .where('beaconId', '==', beaconId)
-            .where('userId', '==', userId);
-
-        const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            return res.status(404).json({
-                success: false,
-                message: 'No matching documents found.'
-            });
-        }
-
-        const results = [];
-        snapshot.forEach(doc => {
-            results.push({ id: doc.id, ...doc.data() });
-        });
-
-        res.status(200).json({
-            success: true,
-            count: results.length,
-            data: results
-        });
-
-    } catch (error) {
-        console.error('Error fetching beacon hits:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch beacon hits.',
-            error: error.message
-        });
+    if (missingFields.length > 0) {
+      w;
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields.",
+        missingFields,
+      });
     }
+
+    // query หาใน Firestore
+    let query = db
+      .collection("beacon_zone_hits")
+      .where("beaconId", "==", beaconId)
+      .where("userId", "==", userId);
+
+    const snapshot = await query.get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: "No matching documents found.",
+      });
+    }
+
+    const results = [];
+    snapshot.forEach((doc) => {
+      results.push({ id: doc.id, ...doc.data() });
+    });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    console.error("Error fetching beacon hits:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch beacon hits.",
+      error: error.message,
+    });
+  }
 };
 
 const getZoneEventsByBeaconIdAndUserId = async (req, res) => {
-    console.log("INTO GET ZONE EVENTS (hits + exits)");
+  console.log("INTO GET ZONE EVENTS (hits + exits)");
 
-    try {
-        const { beaconId, userId } = req.params;
+  try {
+    const { beaconId, userId } = req.params;
 
-        const missingFields = [];
-        if (!beaconId) missingFields.push('beaconId');
-        if (!userId) missingFields.push('userId');
+    const missingFields = [];
+    if (!beaconId) missingFields.push("beaconId");
+    if (!userId) missingFields.push("userId");
 
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields.',
-                missingFields
-            });
-        }
-
-        // 🔹 query ข้อมูลจาก 2 collections พร้อมกัน
-        const [hitsSnap, exitsSnap] = await Promise.all([
-            db.collection('beacon_zone_hits')
-                .where('beaconId', '==', beaconId)
-                .where('userId', '==', userId)
-                .get(),
-            db.collection('beacon_zone_exits')
-                .where('beaconId', '==', beaconId)
-                .where('userId', '==', userId)
-                .get()
-        ]);
-
-        const results = [];
-
-        hitsSnap.forEach(doc => {
-            results.push({
-                id: doc.id,
-                eventType: 'hit', // ✅ บอกว่าเข้า
-                ...doc.data()
-            });
-        });
-
-        exitsSnap.forEach(doc => {
-            results.push({
-                id: doc.id,
-                eventType: 'exit', // ✅ บอกว่าออก
-                ...doc.data()
-            });
-        });
-
-        if (results.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No matching documents found.'
-            });
-        }
-
-        // 🔹 เรียงตาม timestamp (ใหม่ก่อน)
-        results.sort((a, b) => {
-            const timeA = a.timestamp?._seconds || 0;
-            const timeB = b.timestamp?._seconds || 0;
-            return timeB - timeA;
-        });
-
-        res.status(200).json({
-            success: true,
-            count: results.length,
-            data: results
-        });
-
-    } catch (error) {
-        console.error('❌ Error fetching zone events:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch zone events.',
-            error: error.message
-        });
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields.",
+        missingFields,
+      });
     }
+
+    // 🔹 query ข้อมูลจาก 2 collections พร้อมกัน
+    const [hitsSnap, exitsSnap] = await Promise.all([
+      db
+        .collection("beacon_zone_hits")
+        .where("beaconId", "==", beaconId)
+        .where("userId", "==", userId)
+        .get(),
+      db
+        .collection("beacon_zone_exits")
+        .where("beaconId", "==", beaconId)
+        .where("userId", "==", userId)
+        .get(),
+    ]);
+
+    const results = [];
+
+    hitsSnap.forEach((doc) => {
+      results.push({
+        id: doc.id,
+        eventType: "hit", // ✅ บอกว่าเข้า
+        ...doc.data(),
+      });
+    });
+
+    exitsSnap.forEach((doc) => {
+      results.push({
+        id: doc.id,
+        eventType: "exit", // ✅ บอกว่าออก
+        ...doc.data(),
+      });
+    });
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No matching documents found.",
+      });
+    }
+
+    // 🔹 เรียงตาม timestamp (ใหม่ก่อน)
+    results.sort((a, b) => {
+      const timeA = a.timestamp?._seconds || 0;
+      const timeB = b.timestamp?._seconds || 0;
+      return timeB - timeA;
+    });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching zone events:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch zone events.",
+      error: error.message,
+    });
+  }
 };
 
-module.exports = { getBeaconHits, getZoneHitByBeaconIdAndUserId, getZoneEventsByBeaconIdAndUserId }
+module.exports = {
+  getBeaconHits,
+  getZoneHitByBeaconIdAndUserId,
+  getZoneEventsByBeaconIdAndUserId,
+};
