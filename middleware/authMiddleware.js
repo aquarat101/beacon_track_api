@@ -1,6 +1,6 @@
 // --- FILE: middleware/authMiddleware.js ---
 const jwt = require('jsonwebtoken');
-
+const config = require('../config/config')
 
 function verifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -18,7 +18,7 @@ function verifyToken(req, res, next) {
     if (!/^Bearer$/i.test(scheme)) return res.status(401).json({ message: 'Malformed token' });
 
 
-    jwt.verify(token, process.env.JWT_SECRET || 'secret', (err, decoded) => {
+    jwt.verify(token, config.JWT_SECRET || 'secret', (err, decoded) => {
         if (err) return res.status(401).json({ message: 'Invalid token' });
         req.user = decoded; // { uid, email }
         return next();

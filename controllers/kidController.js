@@ -1,6 +1,7 @@
 const { db, bucket } = require("../firebase");
+const config = require("../config/config");
 
-const LINE_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN;
+const LINE_ACCESS_TOKEN = config.CHANNEL_ACCESS_TOKEN;
 
 // ✅ ฟังก์ชันแปลงวันที่โดยใช้ toLocaleString
 const formatDate = (isoString) => {

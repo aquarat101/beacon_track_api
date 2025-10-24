@@ -1,5 +1,6 @@
 const { db } = require('../firebase')
 const fetch = require('node-fetch')
+const config = require('../config/config')
 
 const getPlacesByUserId = async (req, res) => {
     console.log("INTO GET PLACES BY USER ID")
@@ -63,7 +64,7 @@ const searchPlaces = async (req, res) => {
     if (!query) return res.status(400).json({ error: 'Missing query' })
 
     try {
-        const apiKey = process.env.GOOGLE_MAP_API_KEY
+        const apiKey = config.GOOGLE_MAP_API_KEY
         const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`
 
         const response = await fetch(url)

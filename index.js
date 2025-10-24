@@ -1,24 +1,25 @@
 const cors = require("cors");
-const dotenv = require("dotenv");
 const express = require("express");
 const bodyParser = require("body-parser");
+const line = require("@line/bot-sdk");
 
+// Routes
 const beaconRoutes = require("./routes/beaconRoutes");
 const registerRoutes = require("./routes/registerRoutes");
 const userRoutes = require("./routes/userRoutes");
 const kidRoutes = require("./routes/kidRoutes");
 const placeRoutes = require("./routes/placeRoutes");
-
 const authRoute = require("./routes/routes_back_office/authRoutes");
 const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
 
-const line = require("@line/bot-sdk");
+const config = require("./config/config");
+
+// LINE Client
 const client = new line.Client({
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
+  channelAccessToken: config.CHANNEL_ACCESS_TOKEN,
+  channelSecret: config.CHANNEL_SECRET,
 });
 
-dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -30,12 +31,12 @@ app.use("/users", userRoutes);
 app.use("/kids", kidRoutes);
 app.use("/places", placeRoutes);
 
-app.use('/auth', authRoute);
-app.use('/schools', schoolRoute);
+app.use("/auth", authRoute);
+app.use("/schools", schoolRoute);
 
 app.post("/", async (req, res) => {
   const events = req.body.events;
-  
+
   for (const event of events) {
     if (event.type === "follow") {
       await client.replyMessage(event.replyToken, [
@@ -146,8 +147,6 @@ app.post("/", async (req, res) => {
   }
 });
 
-const PORT = process.env.API_DOMAIN || 3001;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port: ${PORT}`);
+app.listen(config.API_DOMAIN, () => {
+  console.log(`Server running on port: ${config.API_DOMAIN}`);
 });
