@@ -1,23 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const schoolController = require('../../controllers/controllers_back_office/schoolController');
+const schoolController = require("../../controllers/controllers_back_office/schoolController");
 
 // Schools
-router.get('/get/:id', schoolController.getSchool);
-router.get('/getAll', schoolController.getSchools);
-router.get("/getAllStudent/:schoolId", schoolController.getSchoolStudents)
-router.get('/getSchoolIdByName/:schoolName', schoolController.getSchoolIdByName)
-router.post('/create', schoolController.createSchool);
-router.post('/createStudent/:schoolId/:userId', schoolController.createStudent)
+router.get("/get/:id", schoolController.getSchool);
+router.get("/getAll", schoolController.getSchools);
+router.get("/getAllStudent/:schoolId", schoolController.getSchoolStudents);
+router.get(
+  "/getSchoolIdByName/:schoolName",
+  schoolController.getSchoolIdByName
+);
+router.post("/create", schoolController.createSchool);
+router.post("/createStudent/:schoolId/:userId", schoolController.createStudent);
 router.put("/update/:id", schoolController.updateSchool);
-router.delete('/delete/:id', schoolController.deleteSchool); // <-- delete school
+router.delete("/delete/:id", schoolController.deleteSchool); // <-- delete school
 
 // School Users
-router.get('/getUser/:id', schoolController.getSchoolUser);
-router.get('/getAllUser', schoolController.getSchoolUsers);
-router.get('/getAllUserById/:schoolId', schoolController.getSchoolUsersBySchoolId)
-router.post('/createSchool', schoolController.createSchoolUser);
-router.put('/updateSchoolUser/:id', schoolController.updateSchoolUser);
-router.delete('/deleteUser/:id', schoolController.deleteSchoolUser); // <-- delete user
+router.get("/getUser/:id", schoolController.getSchoolUser);
+router.get("/getAllUser", schoolController.getSchoolUsers);
+router.get(
+  "/getAllUserById/:schoolId",
+  schoolController.getSchoolUsersBySchoolId
+);
+router.post("/createSchool", schoolController.createSchoolUser);
+router.put("/updateSchoolUser/:id", schoolController.updateSchoolUser);
+router.delete("/deleteUser/:id", schoolController.deleteSchoolUser); // <-- delete user
 
 module.exports = router;
