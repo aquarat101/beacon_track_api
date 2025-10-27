@@ -1,7 +1,7 @@
-// --- controllers/controllers_back_office/authController.js ---
 const { db } = require("../../firebase");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const config = require("../../config/config");
 
 const usersCollection = db.collection("school_users");
 
@@ -9,7 +9,6 @@ const findUserByEmail = async (email) => {
   const q = await usersCollection.where("email", "==", email).limit(1).get();
   if (q.empty) return null;
   const doc = q.docs[0];
-  console.log(doc);
   return { id: doc.id, ...doc.data() };
 };
 
@@ -49,8 +48,6 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  console.log("INTO LOGIN");
-
   try {
     const { email, password } = req.body;
     if (!email || !password)
@@ -63,11 +60,11 @@ const login = async (req, res) => {
     const ok = await bcrypt.compare(password, user.passwordHash || "");
     if (!ok) return res.status(400).json({ message: "Invalid credentials" });
 
-    const payload = { uid: user.id, email: user.email };
-    // const token = "-";
-    // const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
-    //     expiresIn: '7d',
-    // });
+    const payload = { uid: user.id, role: user.role };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || "secret", {
+      expiresIn: config.JWT_EXPIRES_IN,
+    });
 
     // 🔹 อัปเดต status -> Active
     await usersCollection.doc(user.id).update({
@@ -84,7 +81,7 @@ const login = async (req, res) => {
 
     res.json({
       message: "Logged in",
-      // token,
+      token,
       user: userWithoutPassword,
     });
   } catch (err) {

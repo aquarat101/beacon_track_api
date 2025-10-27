@@ -18,8 +18,8 @@ router.post("/logout", logout);
 // Protected route
 router.get("/me", verifyToken, async (req, res) => {
   try {
-    const db = req.app.get("db"); // สมมติคุณเก็บ Firestore db ใน app.locals/db หรือส่งผ่าน middleware
-    const userRef = db.collection("users").doc(req.user.uid);
+    const { db } = require("../../firebase");
+    const userRef = db.collection("school_users").doc(req.user.uid);
     const snap = await userRef.get();
     if (!snap.exists)
       return res.status(404).json({ message: "User not found" });
