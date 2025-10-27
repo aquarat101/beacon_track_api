@@ -9,6 +9,7 @@ const findUserByEmail = async (email) => {
     const q = await usersCollection.where('email', '==', email).limit(1).get();
     if (q.empty) return null;
     const doc = q.docs[0];
+    console.log(doc)
     return { id: doc.id, ...doc.data() };
 };
 
@@ -29,9 +30,10 @@ const register = async (req, res) => {
             email: email.toLowerCase(),
             passwordHash,
             phone_number: '-',
-            role: 'user',
+            role: 'user ',
             school: 'school',
             status: 'Inactive',
+            lastLogin: null,
             createdAt: new Date().toISOString(),
         });
 
@@ -48,12 +50,14 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     console.log('INTO LOGIN');
-    try {
+
+    try {   
         const { email, password } = req.body;
         if (!email || !password)
             return res.status(400).json({ message: 'Email and password required' });
 
         const user = await findUserByEmail(email.toLowerCase());
+
         if (!user)
             return res.status(400).json({ message: 'Invalid credentials' });
 
@@ -62,24 +66,29 @@ const login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
 
         const payload = { uid: user.id, email: user.email };
-        const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
-            expiresIn: '7d',
-        });
+        // const token = "-";
+        // const token = jwt.sign(payload, process.env.JWT_SECRET || 'secret', {
+        //     expiresIn: '7d',
+        // });
 
         // 🔹 อัปเดต status -> Active
         await usersCollection.doc(user.id).update({
             status: 'Active',
             lastLogin: new Date().toISOString(),
-        });
+            updatedAt: new Date().toISOString(),
+        })
 
-        const { passwordHash, ...userWithoutPassword } = user;
-        userWithoutPassword.status = 'Active'; // คืนค่ากลับให้ front เห็นเลย
+        // ✅ ดึงข้อมูลล่าสุดหลังอัปเดต
+        const freshDoc = await usersCollection.doc(user.id).get()
+        const freshUser = { id: user.id, ...freshDoc.data() }
+
+        const { passwordHash, ...userWithoutPassword } = freshUser
 
         res.json({
             message: 'Logged in',
-            token,
+            // token,
             user: userWithoutPassword,
-        });
+        })
     } catch (err) {
         console.error('🔥 Login error:', err);
         res.status(500).json({ message: 'Server error' });
@@ -90,7 +99,7 @@ const logout = async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) return res.status(400).json({ message: 'Email is required' });
-
+        console.log("Email : ", email)
         // ค้นหาผู้ใช้ใน Firestore
         const q = await usersCollection.where('email', '==', email.toLowerCase()).limit(1).get();
         if (q.empty) return res.status(404).json({ message: 'User not found' });
