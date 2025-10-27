@@ -108,7 +108,9 @@ const createSchoolUser = async (req, res) => {
             role,
             school,
             status,
-            createdAt: new Date(),
+            lastLogin: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         }
 
         const docRef = await db.collection("school_users").add(newUser)
@@ -176,12 +178,54 @@ const getSchoolUser = async (req, res) => {
 
 const getSchoolUsers = async (req, res) => {
     console.log("GET SCHOOL USERS")
+
     try {
         const snapshot = await db.collection("school_users").orderBy("createdAt", "desc").get()
         const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         res.status(200).json({ success: true, data: users })
     } catch (error) {
         console.error("🔥 Error fetching users:", error)
+        res.status(500).json({ success: false, message: "Internal server error" })
+    }
+}
+
+const getSchoolUsersBySchoolId = async (req, res) => {
+    console.log("GET SCHOOL USERS BY SCHOOL ID (via name)")
+
+    try {
+        const { schoolId } = req.params
+        if (!schoolId) {
+            return res.status(400).json({ success: false, message: "Missing schoolId" })
+        }
+
+        // ✅ 1) ดึงชื่อโรงเรียนจาก schools collection
+        const schoolDoc = await db.collection("schools").doc(schoolId).get()
+        if (!schoolDoc.exists) {
+            return res.status(404).json({ success: false, message: "School not found" })
+        }
+
+        const schoolData = schoolDoc.data()
+        const schoolName = schoolData.schoolName
+        if (!schoolName) {
+            return res.status(400).json({ success: false, message: "School name missing in document" })
+        }
+
+        // ✅ 2) ใช้ schoolName ไปหาผู้ใช้ใน school_users
+        const snapshot = await db
+            .collection("school_users")
+            .where("school", "==", schoolName)
+            .orderBy("createdAt", "desc")
+            .get()
+
+        if (snapshot.empty) {
+            return res.status(200).json({ success: true, data: [] })
+        }
+
+        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+        res.status(200).json({ success: true, data: users })
+    } catch (error) {
+        console.error("🔥 Error fetching users by schoolId via name:", error)
         res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
@@ -203,6 +247,40 @@ const getSchoolStudents = async (req, res) => {
     } catch (error) {
         console.error("🔥 Error fetching students:", error)
         res.status(500).json({ success: false, message: "Internal server error" })
+    }
+}
+
+const getSchoolIdByName = async (req, res) => {
+    try {
+        const { schoolName } = req.params
+        if (!schoolName) {
+            return res.status(400).json({ success: false, message: "Missing schoolName" })
+        }
+
+        // 🔍 ค้นหาโรงเรียนที่ชื่อเท่ากับ schoolName
+        const snapshot = await db
+            .collection("schools")
+            .where("schoolName", "==", schoolName)
+            .limit(1)
+            .get()
+
+        if (snapshot.empty) {
+            return res.status(404).json({ success: false, message: "School not found" })
+        }
+
+        const doc = snapshot.docs[0]
+        const schoolId = doc.id
+        const schoolData = doc.data()
+
+        return res.status(200).json({
+            success: true,
+            schoolId,
+            schoolName: schoolData.schoolName || "",
+            data: schoolData,
+        })
+    } catch (error) {
+        console.error("🔥 Error fetching schoolId by name:", error)
+        return res.status(500).json({ success: false, message: "Internal server error" })
     }
 }
 
@@ -310,12 +388,14 @@ module.exports = {
     getSchool,
     getSchools,
     getSchoolStudents,
+    getSchoolIdByName,
     updateSchool,
     deleteSchool,
 
     createSchoolUser,
     getSchoolUser,
     getSchoolUsers,
+    getSchoolUsersBySchoolId,
     updateSchoolUser,
     deleteSchoolUser
 };
