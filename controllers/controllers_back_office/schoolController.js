@@ -1,11 +1,16 @@
 // controllers/schoolController.js
-const { SCHOOL_TYPES, EDUCATION_LEVELS } = require("../../constants/enums");
+const {
+  SCHOOL_TYPES,
+  EDUCATION_LEVELS,
+  SCHOOL_STATUSES,
+} = require("../../constants/enums");
+const { ROLES } = require("../../constants/role");
 const { db } = require("../../firebase");
 
 // controllers/schoolController.js
 const createSchool = async (req, res) => {
   try {
-    const { schoolName, schoolType, educationLevel, initialStudents } =
+    const { schoolName, schoolType, educationLevel, initialStudents, status } =
       req.body;
     if (!schoolName || !schoolType || !educationLevel) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -25,12 +30,16 @@ const createSchool = async (req, res) => {
       });
     }
 
+    const schoolStatus = Object.values(SCHOOL_STATUSES).includes(status)
+      ? status
+      : SCHOOL_STATUSES.ACTIVE;
+
     const newSchool = {
       schoolName,
       schoolType,
       educationLevel,
       devices: 0,
-      status: "Active",
+      status: schoolStatus,
       address: "",
       city: "",
       province: "",
@@ -109,44 +118,31 @@ const createStudent = async (req, res) => {
   }
 };
 
-const createSchoolUser = async (req, res) => {
-  try {
-    const { name, email, phone_number, role, school, status } = req.body;
-    if (!name || !email || !phone_number || !role || !school || !status) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    const newUser = {
-      name,
-      email,
-      password: "123",
-      phone_number,
-      role,
-      school,
-      status,
-      lastLogin: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const docRef = await db.collection("school_users").add(newUser);
-    const savedData = { id: docRef.id, ...newUser };
-
-    res.status(201).json({ success: true, data: savedData });
-  } catch (error) {
-    console.error("🔥 Error creating user:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
 const getSchool = async (req, res) => {
   try {
     const { id } = req.params;
+    const { uid, role } = req.user;
+
     if (!id)
       return res
         .status(400)
         .json({ success: false, message: "Missing school id" });
 
+    let userSchoolId = null;
+    if (role === ROLES.SCHOOL_ADMIN) {
+      const userDoc = await db.collection("school_users").doc(uid).get();
+      if (!userDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      userSchoolId = userDoc.data().schoolId;
+      if (userSchoolId !== id) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Access denied to this school" });
+      }
+    }
     const docRef = db.collection("schools").doc(id);
     const doc = await docRef.get();
 
@@ -226,48 +222,24 @@ const getSchoolUsers = async (req, res) => {
 };
 
 const getSchoolUsersBySchoolId = async (req, res) => {
-  console.log("GET SCHOOL USERS BY SCHOOL ID (via name)");
-
   try {
     const { schoolId } = req.params;
-    if (!schoolId) {
+    if (!schoolId)
       return res
         .status(400)
         .json({ success: false, message: "Missing schoolId" });
-    }
 
-    // ✅ 1) ดึงชื่อโรงเรียนจาก schools collection
-    const schoolDoc = await db.collection("schools").doc(schoolId).get();
-    if (!schoolDoc.exists) {
-      return res
-        .status(404)
-        .json({ success: false, message: "School not found" });
-    }
-
-    const schoolData = schoolDoc.data();
-    const schoolName = schoolData.schoolName;
-    if (!schoolName) {
-      return res
-        .status(400)
-        .json({ success: false, message: "School name missing in document" });
-    }
-
-    // ✅ 2) ใช้ schoolName ไปหาผู้ใช้ใน school_users
     const snapshot = await db
       .collection("school_users")
-      .where("school", "==", schoolName)
-      // .orderBy("createdAt", "desc")
+      .where("schoolId", "==", schoolId)
       .get();
-
-    if (snapshot.empty) {
+    if (snapshot.empty)
       return res.status(200).json({ success: true, data: [] });
-    }
 
     const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
     res.status(200).json({ success: true, data: users });
-  } catch (error) {
-    console.error("🔥 Error fetching users by schoolId via name:", error);
+  } catch (err) {
+    console.error("Error fetching users by schoolId:", err);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -349,6 +321,7 @@ const updateSchool = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    const { role, uid } = req.user;
 
     if (!id) {
       return res
@@ -365,9 +338,35 @@ const updateSchool = async (req, res) => {
         .json({ success: false, message: "School not found" });
     }
 
-    // ป้องกันไม่ให้ timestamp เดิมโดนทับ
-    updateData.updatedAt = new Date();
+    if (role === ROLES.SCHOOL_ADMIN) {
+      const userDoc = await db.collection("school_users").doc(uid).get();
+      if (!userDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      const userSchoolId = userDoc.data().schoolId;
+      if (userSchoolId !== id) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Access denied to this school" });
+      }
+    }
 
+    // ตรวจสอบ status ก่อนอัพเดท
+    if (
+      updateData.status &&
+      !Object.values(SCHOOL_STATUSES).includes(updateData.status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed: ${Object.values(
+          SCHOOL_STATUSES
+        ).join(", ")}`,
+      });
+    }
+
+    updateData.updatedAt = new Date();
     await docRef.update(updateData);
 
     const updatedDoc = await docRef.get();
@@ -417,7 +416,7 @@ const updateSchoolUser = async (req, res) => {
   }
 };
 
-// DELETE school by id
+// DELETE school by id (with users)
 const deleteSchool = async (req, res) => {
   try {
     const { id } = req.params;
@@ -430,10 +429,30 @@ const deleteSchool = async (req, res) => {
         .json({ success: false, message: "School not found" });
     }
 
-    await docRef.delete();
+    // 1️⃣ ลบ school_users ของโรงเรียนนี้
+    const usersSnapshot = await db
+      .collection("school_users")
+      .where("schoolId", "==", id)
+      .get();
+
+    const batch = db.batch();
+
+    usersSnapshot.forEach((userDoc) => {
+      batch.delete(userDoc.ref);
+    });
+
+    // 2️⃣ ลบโรงเรียน
+    batch.delete(docRef);
+
+    // 3️⃣ commit ทั้ง batch
+    await batch.commit();
+
     res
       .status(200)
-      .json({ success: true, message: "School deleted successfully" });
+      .json({
+        success: true,
+        message: "School and its users deleted successfully",
+      });
   } catch (error) {
     console.error("🔥 Error deleting school:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -473,7 +492,6 @@ module.exports = {
   updateSchool,
   deleteSchool,
 
-  createSchoolUser,
   getSchoolUser,
   getSchoolUsers,
   getSchoolUsersBySchoolId,

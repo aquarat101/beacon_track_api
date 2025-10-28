@@ -4,17 +4,35 @@ const schoolController = require("../../controllers/controllers_back_office/scho
 const { verifyToken } = require("../../middleware/authMiddleware");
 const { authorizeRoles } = require("../../middleware/roleMiddleware");
 const { ROLES } = require("../../constants/role");
+
+const auth = (roles = []) => [verifyToken, authorizeRoles(...roles)];
+
 // Schools
 router.post(
   "/create",
-  verifyToken,
-  authorizeRoles(ROLES.SUPER_ADMIN),
+  ...auth([ROLES.SUPER_ADMIN]),
   schoolController.createSchool
 );
-router.get("/getAll", schoolController.getSchools);
-router.get("/get/:id", schoolController.getSchool);
-router.put("/update/:id", schoolController.updateSchool);
-router.delete("/delete/:id", schoolController.deleteSchool);
+router.get(
+  "/getAll",
+  ...auth([ROLES.SUPER_ADMIN]),
+  schoolController.getSchools
+);
+router.get(
+  "/get/:id",
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN]),
+  schoolController.getSchool
+);
+router.put(
+  "/update/:id",
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN]),
+  schoolController.updateSchool
+);
+router.delete(
+  "/delete/:id",
+  ...auth([ROLES.SUPER_ADMIN]),
+  schoolController.deleteSchool
+);
 
 router.post("/createStudent/:schoolId/:userId", schoolController.createStudent);
 router.get("/getAllStudent/:schoolId", schoolController.getSchoolStudents);
@@ -30,7 +48,6 @@ router.get(
   "/getAllUserById/:schoolId",
   schoolController.getSchoolUsersBySchoolId
 );
-router.post("/createSchool", schoolController.createSchoolUser);
 router.put("/updateSchoolUser/:id", schoolController.updateSchoolUser);
 router.delete("/deleteUser/:id", schoolController.deleteSchoolUser); // <-- delete user
 
