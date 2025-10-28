@@ -1,4 +1,5 @@
 // controllers/schoolController.js
+const { SCHOOL_TYPES, EDUCATION_LEVELS } = require("../../constants/enums");
 const { db } = require("../../firebase");
 
 // controllers/schoolController.js
@@ -10,26 +11,38 @@ const createSchool = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // เตรียมข้อมูล school
+    if (!SCHOOL_TYPES.includes(schoolType)) {
+      return res.status(400).json({
+        message: `Invalid schoolType. Allowed: ${SCHOOL_TYPES.join(", ")}`,
+      });
+    }
+
+    if (!EDUCATION_LEVELS.includes(educationLevel)) {
+      return res.status(400).json({
+        message: `Invalid educationLevel. Allowed: ${EDUCATION_LEVELS.join(
+          ", "
+        )}`,
+      });
+    }
+
     const newSchool = {
       schoolName,
       schoolType,
       educationLevel,
       devices: 0,
       status: "Active",
-      address: "100/1 Piyo Piyo School",
-      city: "Ladprao",
-      province: "Bangkok",
-      latitude: "00.00000",
-      longtitude: "00.00000",
-      postalCode: "10230",
-      contactNumber: "0123456789",
-      schoolEmail: "piyopiyoschool@mail.com",
-      website: "http://www.piyopiyo.ac.th/",
+      address: "",
+      city: "",
+      province: "",
+      latitude: "",
+      longtitude: "",
+      postalCode: "",
+      contactNumber: "",
+      schoolEmail: "",
+      website: "",
       createdAt: new Date(),
     };
 
-    // เพิ่มเข้า Firestore
     const docRef = await db.collection("schools").add(newSchool);
 
     // ถ้ามี initialStudents (array) ให้เพิ่มเข้า subcollection students

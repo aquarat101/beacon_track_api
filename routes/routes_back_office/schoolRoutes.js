@@ -1,9 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const schoolController = require("../../controllers/controllers_back_office/schoolController");
-
+const { verifyToken } = require("../../middleware/authMiddleware");
+const { authorizeRoles } = require("../../middleware/roleMiddleware");
+const { ROLES } = require("../../constants/role");
 // Schools
-router.post("/create", schoolController.createSchool);
+router.post(
+  "/create",
+  verifyToken,
+  authorizeRoles(ROLES.SUPER_ADMIN),
+  schoolController.createSchool
+);
 router.get("/getAll", schoolController.getSchools);
 router.get("/get/:id", schoolController.getSchool);
 router.put("/update/:id", schoolController.updateSchool);
