@@ -3,21 +3,22 @@ const router = express.Router();
 const schoolController = require("../../controllers/controllers_back_office/schoolController");
 
 // Schools
-router.get("/get/:id", schoolController.getSchool);
+router.post("/create", schoolController.createSchool);
 router.get("/getAll", schoolController.getSchools);
+router.get("/get/:id", schoolController.getSchool);
+router.put("/update/:id", schoolController.updateSchool);
+router.delete("/delete/:id", schoolController.deleteSchool);
+
+router.post("/createStudent/:schoolId/:userId", schoolController.createStudent);
 router.get("/getAllStudent/:schoolId", schoolController.getSchoolStudents);
 router.get(
   "/getSchoolIdByName/:schoolName",
   schoolController.getSchoolIdByName
 );
-router.post("/create", schoolController.createSchool);
-router.post("/createStudent/:schoolId/:userId", schoolController.createStudent);
-router.put("/update/:id", schoolController.updateSchool);
-router.delete("/delete/:id", schoolController.deleteSchool); // <-- delete school
 
 // School Users
-router.get("/getUser/:id", schoolController.getSchoolUser);
 router.get("/getAllUser", schoolController.getSchoolUsers);
+router.get("/getUser/:id", schoolController.getSchoolUser);
 router.get(
   "/getAllUserById/:schoolId",
   schoolController.getSchoolUsersBySchoolId
