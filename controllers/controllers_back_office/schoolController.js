@@ -243,7 +243,7 @@ const getSchoolUsersBySchoolId = async (req, res) => {
     const snapshot = await db
       .collection("school_users")
       .where("school", "==", schoolName)
-      .orderBy("createdAt", "desc")
+      // .orderBy("createdAt", "desc")
       .get();
 
     if (snapshot.empty) {
