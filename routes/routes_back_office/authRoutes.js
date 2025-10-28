@@ -1,8 +1,6 @@
-// --- FILE: routes/auth.js ---
 const express = require("express");
 const router = express.Router();
 
-// destructuring controller functions
 const {
   register,
   login,
@@ -11,7 +9,7 @@ const {
 const { verifyToken } = require("../../middleware/authMiddleware");
 
 // Routes
-router.post("/register", register);
+router.post("/register", verifyToken, register);
 router.post("/login", login);
 router.post("/logout", logout);
 

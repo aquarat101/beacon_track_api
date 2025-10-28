@@ -2,6 +2,7 @@ const { db } = require("../../firebase");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const config = require("../../config/config");
+const { ROLES } = require("../../constants/role");
 
 const usersCollection = db.collection("school_users");
 
@@ -14,9 +15,33 @@ const findUserByEmail = async (email) => {
 
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and password required" });
+    const { name, email, password, role } = req.body;
+    if (!email || !password || !role) {
+      return res
+        .status(400)
+        .json({ message: "Email, password, and role required" });
+    }
+
+    // 🔹 ตรวจสอบว่า role ถูกต้อง
+    if (!Object.values(ROLES).includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    // 🔹 ตรวจสอบ hierarchy: ใครสร้างใคร
+    const creatorRole = req.user?.role; // ต้อง login ก่อน หรือ super_admin ผ่าน token
+    if (creatorRole) {
+      const allowedRoles = ROLE_HIERARCHY[creatorRole] || [];
+      if (!allowedRoles.includes(role)) {
+        return res.status(403).json({
+          message: `Role '${creatorRole}' cannot create role '${role}'`,
+        });
+      }
+    } else {
+      // ถ้า creatorRole ไม่มี (register ผ่าน public route) → ต้องระบุว่าแค่ super_admin เท่านั้น?
+      return res
+        .status(403)
+        .json({ message: "Only logged in users can create accounts" });
+    }
 
     const existing = await findUserByEmail(email.toLowerCase());
     if (existing)
@@ -29,7 +54,7 @@ const register = async (req, res) => {
       email: email.toLowerCase(),
       passwordHash,
       phone_number: "-",
-      role: "user ",
+      role,
       school: "school",
       status: "Inactive",
       lastLogin: null,
