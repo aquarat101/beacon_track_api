@@ -42,13 +42,29 @@ router.get(
 );
 
 // School Users
-router.get("/getAllUser", schoolController.getSchoolUsers);
-router.get("/getUser/:id", schoolController.getSchoolUser);
+router.get("/getAllUser", verifyToken, schoolController.getSchoolUsers);
 router.get(
   "/getAllUserById/:schoolId",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN]),
   schoolController.getSchoolUsersBySchoolId
 );
-router.put("/updateSchoolUser/:id", schoolController.updateSchoolUser);
-router.delete("/deleteUser/:id", schoolController.deleteSchoolUser); // <-- delete user
+router.get(
+  "/getUser/:id",
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  schoolController.getSchoolUser
+);
+router.put(
+  "/updateSchoolUser/:id",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN]),
+  schoolController.updateSchoolUser
+);
+router.delete(
+  "/deleteUser/:id",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN]),
+  schoolController.deleteSchoolUser
+);
 
 module.exports = router;

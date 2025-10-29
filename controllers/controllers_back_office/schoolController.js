@@ -178,14 +178,16 @@ const getSchools = async (req, res) => {
   }
 };
 
-// ดึงผู้ใช้โรงเรียนตาม id
 const getSchoolUser = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id)
+    const { uid, role } = req.user;
+
+    if (!id) {
       return res
         .status(400)
         .json({ success: false, message: "Missing user id" });
+    }
 
     const docRef = db.collection("school_users").doc(id);
     const doc = await docRef.get();
@@ -196,9 +198,27 @@ const getSchoolUser = async (req, res) => {
         .json({ success: false, message: "School user not found" });
     }
 
-    res
-      .status(200)
-      .json({ success: true, data: { id: doc.id, ...doc.data() } });
+    const userData = doc.data();
+
+    if ([ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF].includes(role)) {
+      const currentUserDoc = await db.collection("school_users").doc(uid).get();
+      if (!currentUserDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Current user not found" });
+      }
+
+      const currentSchoolId = currentUserDoc.data().schoolId;
+      if (userData.schoolId !== currentSchoolId) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Access denied to this user" });
+      }
+    }
+
+    const { passwordHash, ...safeData } = userData;
+
+    res.status(200).json({ success: true, data: { id: doc.id, ...safeData } });
   } catch (error) {
     console.error("🔥 Error fetching school user:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -207,6 +227,7 @@ const getSchoolUser = async (req, res) => {
 
 const getSchoolUsers = async (req, res) => {
   console.log("GET SCHOOL USERS");
+  const { uid, role } = req.user;
 
   try {
     const snapshot = await db
@@ -214,11 +235,38 @@ const getSchoolUsers = async (req, res) => {
       .orderBy("createdAt", "desc")
       .get();
 
-    const users = snapshot.docs.map((doc) => {
+    let filteredUsers = [];
+
+    if (role === ROLES.SUPER_ADMIN) {
+      filteredUsers = snapshot.docs;
+    } else if ([ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF].includes(role)) {
+      const userDoc = await db.collection("school_users").doc(uid).get();
+
+      if (!userDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      const currentSchoolId = userDoc.data().schoolId;
+
+      filteredUsers = snapshot.docs.filter((doc) => {
+        const data = doc.data();
+        return (
+          [ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF].includes(data.role) &&
+          data.schoolId === currentSchoolId
+        );
+      });
+    } else {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const users = filteredUsers.map((doc) => {
       const data = doc.data();
       const { passwordHash, ...safeData } = data;
       return { id: doc.id, ...safeData };
     });
+
     res.status(200).json({ success: true, data: users });
   } catch (error) {
     console.error("🔥 Error fetching users:", error);
@@ -229,19 +277,27 @@ const getSchoolUsers = async (req, res) => {
 const getSchoolUsersBySchoolId = async (req, res) => {
   try {
     const { schoolId } = req.params;
-    if (!schoolId)
+    if (!schoolId) {
       return res
         .status(400)
         .json({ success: false, message: "Missing schoolId" });
+    }
 
     const snapshot = await db
       .collection("school_users")
       .where("schoolId", "==", schoolId)
       .get();
-    if (snapshot.empty)
-      return res.status(200).json({ success: true, data: [] });
 
-    const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    if (snapshot.empty) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const users = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const { passwordHash, ...safeData } = data;
+      return { id: doc.id, ...safeData };
+    });
+
     res.status(200).json({ success: true, data: users });
   } catch (err) {
     console.error("Error fetching users by schoolId:", err);
@@ -385,11 +441,11 @@ const updateSchool = async (req, res) => {
   }
 };
 
-// UPDATE school user by id
 const updateSchoolUser = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    const { uid, role } = req.user;
 
     if (!id) {
       return res
@@ -406,14 +462,46 @@ const updateSchoolUser = async (req, res) => {
         .json({ success: false, message: "School user not found" });
     }
 
-    updateData.updatedAt = new Date();
+    const targetUser = docSnap.data();
 
+    if (role === ROLES.SUPER_ADMIN) {
+      if (targetUser.role !== ROLES.SCHOOL_ADMIN) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Can only update SCHOOL_ADMIN" });
+      }
+    } else if (role === ROLES.SCHOOL_ADMIN) {
+      const currentUserDoc = await db.collection("school_users").doc(uid).get();
+      if (!currentUserDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Current user not found" });
+      }
+
+      const currentSchoolId = currentUserDoc.data().schoolId;
+
+      if (
+        targetUser.role !== ROLES.SCHOOL_STAFF ||
+        targetUser.schoolId !== currentSchoolId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied to update this user",
+        });
+      }
+    } else {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    updateData.updatedAt = new Date();
     await docRef.update(updateData);
 
     const updatedDoc = await docRef.get();
+    const { passwordHash, ...safeData } = updatedDoc.data();
+
     res.status(200).json({
       success: true,
-      data: { id: updatedDoc.id, ...updatedDoc.data() },
+      data: { id: updatedDoc.id, ...safeData },
     });
   } catch (error) {
     console.error("🔥 Error updating school user:", error);
@@ -452,12 +540,10 @@ const deleteSchool = async (req, res) => {
     // 3️⃣ commit ทั้ง batch
     await batch.commit();
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "School and its users deleted successfully",
-      });
+    res.status(200).json({
+      success: true,
+      message: "School and its users deleted successfully",
+    });
   } catch (error) {
     console.error("🔥 Error deleting school:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -468,13 +554,45 @@ const deleteSchool = async (req, res) => {
 const deleteSchoolUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const docRef = db.collection("school_users").doc(id);
+    const { uid, role } = req.user;
 
+    const docRef = db.collection("school_users").doc(id);
     const docSnap = await docRef.get();
+
     if (!docSnap.exists) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
+    }
+
+    const targetUser = docSnap.data();
+
+    if (role === ROLES.SUPER_ADMIN) {
+      if (![ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF].includes(targetUser.role)) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Cannot delete this user" });
+      }
+    } else if (role === ROLES.SCHOOL_ADMIN) {
+      const currentUserDoc = await db.collection("school_users").doc(uid).get();
+      if (!currentUserDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Current user not found" });
+      }
+
+      const currentSchoolId = currentUserDoc.data().schoolId;
+      if (
+        targetUser.role !== ROLES.SCHOOL_STAFF ||
+        targetUser.schoolId !== currentSchoolId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied to delete this user",
+        });
+      }
+    } else {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
     await docRef.delete();
