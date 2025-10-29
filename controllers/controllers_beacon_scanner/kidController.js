@@ -386,7 +386,7 @@ async function checkOfflineServerSide() {
 }
 
 // run every 2 mins
-setInterval(checkOfflineServerSide, 2 * 60 * 1000);
+setInterval(checkOfflineServerSide, 5 * 60 * 1000);
 
 // small helpers
 function distanceMeters(lat1, lon1, lat2, lon2) {
