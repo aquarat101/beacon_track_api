@@ -15,7 +15,7 @@ const findUserByEmail = async (email) => {
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, schoolId } = req.body;
+    const { name, email, password, role, schoolId, phone_number } = req.body;
     if (!email || !password || !role) {
       return res
         .status(400)
@@ -83,7 +83,7 @@ const register = async (req, res) => {
       name: name || "",
       email: email.toLowerCase(),
       passwordHash,
-      phone_number: null,
+      phone_number: phone_number || null,
       role,
       schoolId: finalSchoolId,
       status: "Inactive",
