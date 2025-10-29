@@ -128,13 +128,13 @@ const updateKidStatus = async (req, res) => {
 /**
  * POST /api/kids/checkOffline
  * body: { detectedBeacons: { beaconId: lastSeenMs, ... } }
- *
- * Backend will:
- * - Iterate kids collection
- * - For each kid: check last seen (from detectedBeacons map) and current stored status:
- *   - If now - lastSeen > OFFLINE_COOLDOWN && status === 'online' -> set offline, create beacon_zone_exits, send LINE
- *   - If status === 'offline' -> re-alert logic based on alertCounter / lastOfflineAt
- */
+*
+* Backend will:
+* - Iterate kids collection
+* - For each kid: check last seen (from detectedBeacons map) and current stored status:
+*   - If now - lastSeen > OFFLINE_COOLDOWN && status === 'online' -> set offline, create beacon_zone_exits, send LINE
+*   - If status === 'offline' -> re-alert logic based on alertCounter / lastOfflineAt
+*/
 const OFFLINE_COOLDOWN = 120 * 1000; // 2 minutes
 
 const checkOffline = async (req, res) => {
@@ -217,14 +217,14 @@ const checkOffline = async (req, res) => {
         // re-alert logic
         const lastOfflineAt = k.lastOfflineAt ? new Date(k.lastOfflineAt._seconds ? k.lastOfflineAt._seconds * 1000 : k.lastOfflineAt).getTime() : 0;
         if (lastOfflineAt) {
-          const intervals = [2*60*1000, 5*60*1000, 10*60*1000];
+          const intervals = [2 * 60 * 1000, 5 * 60 * 1000, 10 * 60 * 1000];
           if (alertCounter < 3) {
             const elapsed = nowMs - lastOfflineAt;
-            const trigger = intervals.slice(0, alertCounter + 1).reduce((a,b)=>a+b,0);
+            const trigger = intervals.slice(0, alertCounter + 1).reduce((a, b) => a + b, 0);
             if (elapsed >= trigger) {
               // send re-alert
               const t = Math.floor(elapsed / 60000);
-              const timeStr = t >= 60 ? `${Math.floor(t/60)}h ${t%60}m` : `${t}m`;
+              const timeStr = t >= 60 ? `${Math.floor(t / 60)}h ${t % 60}m` : `${t}m`;
               const when = new Date();
               const msg = [
                 {
@@ -263,16 +263,141 @@ const checkOffline = async (req, res) => {
   }
 };
 
+async function checkOfflineServerSide() {
+  try {
+    const nowMs = Date.now();
+    const kidsSnap = await db.collection('kids').get();
+    const ops = [];
+
+    kidsSnap.forEach(doc => {
+      const k = doc.data();
+      const beaconId = k.beaconId;
+      if (!beaconId) return;
+
+      const lastSeenAt = k.lastSeenAt ? new Date(k.lastSeenAt._seconds ? k.lastSeenAt._seconds * 1000 : k.lastSeenAt).getTime() : 0;
+      const status = k.status || 'offline';
+      const parentUserId = k.userId;
+      const alertCounter = typeof k.alertCounter === 'number' ? k.alertCounter : 0;
+      const kidName = k.name || 'No name';
+      const lastZoneId = k.lastZoneId || '';
+
+      // offline detection
+      if ((nowMs - lastSeenAt) > OFFLINE_COOLDOWN && status === 'online') {
+        const offlineTimestamp = new Date();
+        const p = doc.ref.update({
+          status: 'offline',
+          lastOfflineAt: offlineTimestamp,
+          alertCounter: 0
+        }).then(async () => {
+          // get place info
+          let placeName = 'unknown place', placeType = 'Other';
+          if (lastZoneId) {
+            const placeDoc = await db.collection('places').doc(lastZoneId).get();
+            if (placeDoc.exists) {
+              const pd = placeDoc.data();
+              placeName = pd.name || placeName;
+              placeType = pd.type || placeType;
+            }
+          }
+
+          // create beacon_zone_exits
+          const zoneExit = {
+            zoneId: lastZoneId,
+            userId: parentUserId,
+            beaconId,
+            type: placeType,
+            state: 'Outside',
+            timestamp: offlineTimestamp
+          };
+          await db.collection('beacon_zone_exits').add(zoneExit);
+
+          // send LINE
+          if (parentUserId) {
+            const msg = [
+              {
+                type: 'flex',
+                altText: `Offline Alert: ${kidName}`,
+                contents: {
+                  type: 'bubble',
+                  body: {
+                    type: 'box',
+                    layout: 'vertical',
+                    spacing: 'md',
+                    contents: [
+                      { type: 'text', text: 'Piyo! Piyo!', weight: 'bold', color: '#1DB446', size: 'lg' },
+                      { type: 'text', text: `${kidName} is now offline at ${placeName}`, wrap: true, color: '#555555', size: 'md' },
+                      { type: 'text', text: `Time: ${formatDate(offlineTimestamp)}`, wrap: true, color: '#969494', size: 'sm' }
+                    ]
+                  }
+                }
+              }
+            ];
+            await sendLineMessage(parentUserId, msg);
+          }
+        }).catch(err => console.error('error marking offline', err));
+
+        ops.push(p);
+      } else if (status === 'offline') {
+        // re-alert logic (เหมือนเดิม)
+        const lastOfflineAt = k.lastOfflineAt ? new Date(k.lastOfflineAt._seconds ? k.lastOfflineAt._seconds * 1000 : k.lastOfflineAt).getTime() : 0;
+        if (lastOfflineAt) {
+          const intervals = [2 * 60 * 1000, 5 * 60 * 1000, 10 * 60 * 1000];
+          if (alertCounter < 3) {
+            const elapsed = nowMs - lastOfflineAt;
+            const trigger = intervals.slice(0, alertCounter + 1).reduce((a, b) => a + b, 0);
+            if (elapsed >= trigger) {
+              const t = Math.floor(elapsed / 60000);
+              const timeStr = t >= 60 ? `${Math.floor(t / 60)}h ${t % 60}m` : `${t}m`;
+              const when = new Date();
+              const msg = [
+                {
+                  type: 'flex',
+                  altText: `Re-alert: ${kidName}`,
+                  contents: {
+                    type: 'bubble',
+                    body: {
+                      type: 'box',
+                      layout: 'vertical',
+                      spacing: 'md',
+                      contents: [
+                        { type: 'text', text: 'Piyo! Piyo!', weight: 'bold', color: '#1DB446', size: 'lg' },
+                        { type: 'text', text: `${kidName}, No kid found since last seen (~${timeStr} ago)`, wrap: true, color: '#555555', size: 'md' },
+                        { type: 'text', text: `Time: ${formatDate(when)}`, wrap: true, color: '#969494', size: 'sm' }
+                      ]
+                    }
+                  }
+                }
+              ];
+              const p = sendLineMessage(parentUserId, msg).then(async () => {
+                await doc.ref.update({ alertCounter: alertCounter + 1 });
+              });
+              ops.push(p);
+            }
+          }
+        }
+      }
+    });
+
+    await Promise.all(ops);
+    console.log('✅ Server-side offline check done');
+  } catch (e) {
+    console.error('checkOfflineServerSide error', e);
+  }
+}
+
+// run every 2 mins
+setInterval(checkOfflineServerSide, 2 * 60 * 1000);
+
 // small helpers
 function distanceMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const toRad = v => v * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-            Math.sin(dLon/2)*Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -302,6 +427,7 @@ function formatDate(d) {
     return dt.toLocaleString('en-GB'); // dd/mm/yyyy hh:mm:ss
   } catch (e) { return '' }
 }
+
 
 module.exports = {
   getKidsBeacons,
