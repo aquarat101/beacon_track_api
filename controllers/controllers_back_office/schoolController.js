@@ -213,7 +213,12 @@ const getSchoolUsers = async (req, res) => {
       .collection("school_users")
       .orderBy("createdAt", "desc")
       .get();
-    const users = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    const users = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const { passwordHash, ...safeData } = data;
+      return { id: doc.id, ...safeData };
+    });
     res.status(200).json({ success: true, data: users });
   } catch (error) {
     console.error("🔥 Error fetching users:", error);
