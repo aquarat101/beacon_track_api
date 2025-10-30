@@ -86,7 +86,7 @@ const register = async (req, res) => {
       phone_number: phone_number || null,
       role,
       schoolId: finalSchoolId,
-      status: "Inactive",
+      status: "Active",
       lastLogin: null,
       createdAt: new Date().toISOString(),
     });

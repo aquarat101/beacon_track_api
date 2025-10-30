@@ -11,10 +11,12 @@ const placeRoutes = require("./routes/placeRoutes");
 
 const authRoute = require("./routes/routes_back_office/authRoutes");
 const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
+const studentsRoute = require("./routes/routes_back_office/studentRoutes");
+const schoolUserRoute = require("./routes/routes_back_office/schoolUserRoute");
 
-const zoneBeaconScannerRoute = require("./routes/routes_beacon_scanner/zoneRoutes")
-const kidBeaconScannerRoute = require('./routes/routes_beacon_scanner/kidRoutes');
-const lineBeaconScannerRoute = require('./routes/routes_beacon_scanner/lineRoutes')
+const zoneBeaconScannerRoute = require("./routes/routes_beacon_scanner/zoneRoutes");
+const kidBeaconScannerRoute = require("./routes/routes_beacon_scanner/kidRoutes");
+const lineBeaconScannerRoute = require("./routes/routes_beacon_scanner/lineRoutes");
 
 const lineRoute = require("./routes/lineRoutes");
 
@@ -32,10 +34,12 @@ app.use("/places", placeRoutes);
 
 app.use("/auth", authRoute);
 app.use("/schools", schoolRoute);
+app.use("/students", studentsRoute);
+app.use("/schoolUsers", schoolUserRoute);
 
-app.use('/zone', zoneBeaconScannerRoute)
-app.use('/kid', kidBeaconScannerRoute)
-app.use('/line', lineBeaconScannerRoute)
+app.use("/zone", zoneBeaconScannerRoute);
+app.use("/kid", kidBeaconScannerRoute);
+app.use("/line", lineBeaconScannerRoute);
 
 app.use("/", lineRoute);
 
