@@ -5,7 +5,6 @@ const config = require("./config/config");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: config.DATABASE_URL, // ถ้าใช้ Realtime DB
   storageBucket: config.STORAGE_BUCKET,
 });
 
