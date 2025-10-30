@@ -283,13 +283,24 @@ const getSchoolUsersBySchoolId = async (req, res) => {
         .json({ success: false, message: "Missing schoolId" });
     }
 
+    const schoolRef = db.collection("schools").doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+
+    if (!schoolDoc.exists) {
+      return res
+        .status(404)
+        .json({ success: false, message: "School not found" });
+    }
+
     const snapshot = await db
       .collection("school_users")
       .where("schoolId", "==", schoolId)
       .get();
 
     if (snapshot.empty) {
-      return res.status(200).json({ success: true, data: [] });
+      return res
+        .status(404)
+        .json({ success: false, message: "No users found for this school" });
     }
 
     const users = snapshot.docs.map((doc) => {
