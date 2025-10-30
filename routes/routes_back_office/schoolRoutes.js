@@ -34,12 +34,42 @@ router.delete(
   schoolController.deleteSchool
 );
 
-router.post("/createStudent/:schoolId/:userId", schoolController.createStudent);
-router.get("/getAllStudent/:schoolId", schoolController.getSchoolStudents);
-router.get(
-  "/getSchoolIdByName/:schoolName",
-  schoolController.getSchoolIdByName
+// student
+router.post(
+  "/createStudent/:schoolId/:userId",
+  verifyToken,
+  ...auth([ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  schoolController.createStudent
 );
+router.get(
+  "/getAllStudent",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN]),
+  schoolController.getAllStudents
+);
+router.get(
+  "/getAllStudent/:schoolId",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  schoolController.getSchoolStudents
+);
+router.get(
+  "/:schoolId/student/:studentId",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  schoolController.getStudentById
+);
+router.delete(
+  "/:schoolId/student/:studentId",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  schoolController.deleteStudent
+);
+
+// router.get(
+//   "/getSchoolIdByName/:schoolName",
+//   schoolController.getSchoolIdByName
+// );
 
 // School Users
 router.get("/getAllUser", verifyToken, schoolController.getSchoolUsers);
