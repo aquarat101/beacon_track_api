@@ -14,6 +14,7 @@ const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
 const studentsRoute = require("./routes/routes_back_office/studentRoutes");
 const schoolUserRoute = require("./routes/routes_back_office/schoolUserRoute");
 const systemController = require("./routes/routes_back_office/systemRoutes");
+const dashBoardController = require("./routes/routes_back_office/dashBoardRoutes");
 
 const zoneBeaconScannerRoute = require("./routes/routes_beacon_scanner/zoneRoutes");
 const kidBeaconScannerRoute = require("./routes/routes_beacon_scanner/kidRoutes");
@@ -38,6 +39,7 @@ app.use("/schools", schoolRoute);
 app.use("/students", studentsRoute);
 app.use("/schoolUsers", schoolUserRoute);
 app.use("/systemBof", systemController);
+app.use("/dashBoard", dashBoardController);
 
 app.use("/zone", zoneBeaconScannerRoute);
 app.use("/kid", kidBeaconScannerRoute);
