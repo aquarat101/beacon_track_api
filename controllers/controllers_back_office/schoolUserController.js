@@ -261,9 +261,27 @@ const getSchoolUser = async (req, res) => {
       }
     }
 
+    let schoolName = null;
+    if (userData.schoolId) {
+      const schoolDoc = await db
+        .collection("schools")
+        .doc(userData.schoolId)
+        .get();
+      if (schoolDoc.exists) {
+        schoolName = schoolDoc.data().schoolName;
+      }
+    }
+
     const { passwordHash, ...safeData } = userData;
 
-    res.status(200).json({ success: true, data: { id: doc.id, ...safeData } });
+    res.status(200).json({
+      success: true,
+      data: {
+        id: doc.id,
+        ...safeData,
+        schoolName,
+      },
+    });
   } catch (error) {
     console.error("🔥 Error fetching school user:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
