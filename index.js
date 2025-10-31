@@ -13,6 +13,7 @@ const authRoute = require("./routes/routes_back_office/authRoutes");
 const schoolRoute = require("./routes/routes_back_office/schoolRoutes");
 const studentsRoute = require("./routes/routes_back_office/studentRoutes");
 const schoolUserRoute = require("./routes/routes_back_office/schoolUserRoute");
+const systemController = require("./routes/routes_back_office/systemRoutes");
 
 const zoneBeaconScannerRoute = require("./routes/routes_beacon_scanner/zoneRoutes");
 const kidBeaconScannerRoute = require("./routes/routes_beacon_scanner/kidRoutes");
@@ -36,6 +37,7 @@ app.use("/auth", authRoute);
 app.use("/schools", schoolRoute);
 app.use("/students", studentsRoute);
 app.use("/schoolUsers", schoolUserRoute);
+app.use("/systemBof", systemController);
 
 app.use("/zone", zoneBeaconScannerRoute);
 app.use("/kid", kidBeaconScannerRoute);

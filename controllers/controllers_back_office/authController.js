@@ -16,92 +16,132 @@ const findUserByEmail = async (email) => {
 const register = async (req, res) => {
   try {
     const { name, email, password, role, schoolId, phone_number } = req.body;
-    if (!email || !password || !role) {
-      return res
-        .status(400)
-        .json({ message: "Email, password, and role required" });
-    }
-
-    if (!Object.values(ROLES).includes(role)) {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
     const creatorRole = req.user?.role;
     const creatorUid = req.user?.uid;
 
-    if (!creatorRole) {
-      return res
-        .status(403)
-        .json({ message: "Only logged in users can create accounts" });
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, password, and role are required",
+      });
     }
 
+    if (!Object.values(ROLES).includes(role)) {
+      return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    if (!creatorRole) {
+      return res.status(403).json({
+        success: false,
+        message: "Only logged-in users can create accounts",
+      });
+    }
+
+    // 🔹 Role hierarchy check
     const allowedRoles = ROLE_HIERARCHY[creatorRole] || [];
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({
+        success: false,
         message: `Role '${creatorRole}' cannot create role '${role}'`,
       });
     }
 
     let finalSchoolId = schoolId || null;
 
+    // Inherit schoolId if creator is SCHOOL_ADMIN
     if (creatorRole === ROLES.SCHOOL_ADMIN) {
       const creatorDoc = await usersCollection.doc(creatorUid).get();
-      if (!creatorDoc.exists) {
-        return res.status(404).json({ message: "Creator user not found" });
-      }
-      const creatorSchoolId = creatorDoc.data().schoolId;
-      if (!creatorSchoolId) {
+      if (!creatorDoc.exists)
         return res
-          .status(403)
-          .json({ message: "Your account is not associated with any school" });
-      }
+          .status(404)
+          .json({ success: false, message: "Creator user not found" });
+      const creatorSchoolId = creatorDoc.data().schoolId;
+      if (!creatorSchoolId)
+        return res.status(403).json({
+          success: false,
+          message: "Your account is not associated with any school",
+        });
       finalSchoolId = creatorSchoolId;
     }
 
+    // SUPER_ADMIN creating SCHOOL_ADMIN must provide schoolId
     if (creatorRole === ROLES.SUPER_ADMIN && role === ROLES.SCHOOL_ADMIN) {
-      // Super admin ต้องระบุ schoolId เมื่อสร้าง school_admin
-      if (!schoolId) {
-        return res
-          .status(400)
-          .json({ message: "schoolId is required to create school_admin" });
-      }
-      // ตรวจสอบว่า schoolId มีอยู่จริง
+      if (!schoolId)
+        return res.status(400).json({
+          success: false,
+          message: "schoolId is required to create school_admin",
+        });
       const schoolDoc = await db.collection("schools").doc(schoolId).get();
-      if (!schoolDoc.exists) {
-        return res.status(404).json({ message: "School not found" });
-      }
+      if (!schoolDoc.exists)
+        return res
+          .status(404)
+          .json({ success: false, message: "School not found" });
       finalSchoolId = schoolId;
     }
 
-    const existing = await findUserByEmail(email.toLowerCase());
-    if (existing)
-      return res.status(400).json({ message: "Email already in use" });
+    // Transaction to prevent race conditions
+    const userResult = await db.runTransaction(async (t) => {
+      const emailLower = email.toLowerCase();
 
-    const passwordHash = await bcrypt.hash(password, 10);
+      // Check duplicate email
+      const existingSnapshot = await t.get(
+        usersCollection.where("email", "==", emailLower).limit(1)
+      );
+      if (!existingSnapshot.empty) throw new Error("Email already in use");
 
-    const newUserRef = await usersCollection.add({
-      name: name || "",
-      email: email.toLowerCase(),
-      passwordHash,
-      phone_number: phone_number || null,
-      role,
-      schoolId: finalSchoolId,
-      status: "Active",
-      lastLogin: null,
-      createdAt: new Date().toISOString(),
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Add new user
+      const newUserRef = usersCollection.doc();
+      const newUserData = {
+        name: name || "",
+        email: emailLower,
+        passwordHash,
+        phone_number: phone_number || null,
+        role,
+        schoolId: finalSchoolId,
+        status: "Active",
+        lastLogin: null,
+        createdAt: new Date().toISOString(),
+      };
+      t.set(newUserRef, newUserData);
+
+      // Log system event
+      const logRef = db.collection("system_logs").doc();
+      t.set(logRef, {
+        action: "Add user",
+        actorId: creatorUid,
+        actorRole: creatorRole,
+        targetUserId: newUserRef.id,
+        timestamp: new Date(),
+      });
+
+      return { id: newUserRef.id, ...newUserData };
     });
 
-    const userDoc = await newUserRef.get();
-    const user = { id: newUserRef.id, ...userDoc.data() };
-    delete user.passwordHash;
-
-    res.status(201).json({ message: "User created", user });
+    // 🔹 Success response
+    const { passwordHash, ...safeUserData } = userResult;
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      user: safeUserData,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    // 🔹 Handle duplicate email gracefully
+    if (err.message === "Email already in use") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use" });
+    }
+
+    // 🔹 Unexpected errors
+    console.error("🔥 Unexpected register error:", err.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
   }
 };
-
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
