@@ -600,10 +600,163 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+const historyTrack = async (req, res) => {
+  try {
+    const { schoolId, studentId } = req.params;
+    const { uid, role } = req.user;
+
+    if (!schoolId || !studentId) {
+      return res
+        .status(422)
+        .json({ success: false, message: "Missing schoolId or studentId" });
+    }
+
+    if ([ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF].includes(role)) {
+      const currentUserDoc = await db.collection("school_users").doc(uid).get();
+      if (!currentUserDoc.exists) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Current user not found" });
+      }
+
+      const currentSchoolId = currentUserDoc.data().schoolId;
+      if (currentSchoolId !== schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied: cannot view students from another school",
+        });
+      }
+    }
+
+    const schoolDoc = await db.collection("schools").doc(schoolId).get();
+    if (!schoolDoc.exists) {
+      return res
+        .status(404)
+        .json({ success: false, message: "School not found" });
+    }
+
+    const studentDoc = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("students")
+      .doc(studentId)
+      .get();
+
+    if (!studentDoc.exists) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+    }
+
+    const studentData = studentDoc.data();
+    const { beaconId, parentId: userId } = studentData;
+
+    if (!beaconId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing beaconId or userId in student data",
+      });
+    }
+
+    const kidSnapshot = await db
+      .collection("kids")
+      .where("beaconId", "==", beaconId)
+      .limit(1)
+      .get();
+
+    if (kidSnapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: `No kid found for beaconId "${beaconId}"`,
+      });
+    }
+
+    const kidData = kidSnapshot.docs[0].data();
+
+    if (kidData.schoolId && kidData.schoolId !== schoolId) {
+      return res.status(403).json({
+        success: false,
+        message: "This kid does not belong to the specified school",
+      });
+    }
+
+    const [hitsSnap, exitsSnap] = await Promise.all([
+      db
+        .collection("beacon_zone_hits")
+        .where("beaconId", "==", beaconId)
+        .where("userId", "==", userId)
+        .get(),
+      db
+        .collection("beacon_zone_exits")
+        .where("beaconId", "==", beaconId)
+        .where("userId", "==", userId)
+        .get(),
+    ]);
+
+    const results = [];
+
+    hitsSnap.forEach((doc) => {
+      const data = doc.data();
+      results.push({
+        id: doc.id,
+        type: data.type || "",
+        eventType: "hit",
+        timestamp: data.timestamp || null,
+      });
+    });
+
+    exitsSnap.forEach((doc) => {
+      const data = doc.data();
+      results.push({
+        id: doc.id,
+        type: data.type || "",
+        eventType: "exit",
+        timestamp: data.timestamp || null,
+      });
+    });
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No history records found for this student",
+      });
+    }
+
+    // 🔹 เรียงตามเวลาใหม่ก่อนเก่า
+    results.sort((a, b) => {
+      const timeA = a.timestamp?._seconds || 0;
+      const timeB = b.timestamp?._seconds || 0;
+      return timeB - timeA;
+    });
+
+    // 🔹 แปลง timestamp ให้อ่านง่าย
+    const formattedResults = results.map((r) => ({
+      type: r.type,
+      eventType: r.eventType,
+      timestamp: r.timestamp
+        ? new Date(r.timestamp._seconds * 1000).toISOString()
+        : null,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: formattedResults.length,
+      data: formattedResults,
+    });
+  } catch (error) {
+    console.error("🔥 Error tracking student history:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error (Error tracking student history)",
+    });
+  }
+};
+
 module.exports = {
   createStudent,
   getAllStudents,
   getSchoolStudents,
   getStudentById,
   deleteStudent,
+  historyTrack,
 };

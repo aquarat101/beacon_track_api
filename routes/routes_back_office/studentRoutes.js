@@ -37,5 +37,11 @@ router.delete(
   ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
   studentController.deleteStudent
 );
+router.get(
+  "/historyTrack/:schoolId/student/:studentId",
+  verifyToken,
+  ...auth([ROLES.SUPER_ADMIN, ROLES.SCHOOL_ADMIN, ROLES.SCHOOL_STAFF]),
+  studentController.historyTrack
+);
 
 module.exports = router;
