@@ -65,6 +65,7 @@ const createStudent = async (req, res) => {
     const studentData = {
       beaconId,
       deviceName,
+      status:"Active",
       parentId: userId,
       createdAt: new Date(),
     };
