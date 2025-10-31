@@ -151,22 +151,27 @@ const getKidByUserIdAndKidId = async (req, res) => {
 
 const getMultipleKids = async (req, res) => {
   try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0)
+    const { beaconIds } = req.body;
+    if (beaconIds.length === 0)
       return res
         .status(400)
-        .json({ success: false, message: "No ids provided" });
+        .json({ success: false, message: "No beaconIds provided" });
 
-    const promises = ids.map((id) => db.collection("kids").doc(id).get());
-    const snapshots = await Promise.all(promises);
+    // ✅ ใช้ where แทน doc() เพื่อค้นหาจาก field beaconId
+    const kidsRef = db.collection("kids");
+    const queries = beaconIds.map((beaconId) =>
+      kidsRef.where("beaconId", "==", beaconId).get()
+    );
 
-    const kids = snapshots
-      .filter((doc) => doc.exists)
-      .map((doc) => ({ id: doc.id, ...doc.data() }));
+    const snapshots = await Promise.all(queries);
+
+    const kids = snapshots.flatMap((querySnapshot) =>
+      querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    );
 
     res.status(200).json({ success: true, data: kids });
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching kids by beaconIds:", err);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
